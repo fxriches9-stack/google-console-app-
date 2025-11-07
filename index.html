@@ -51,7 +51,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
 .panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
 .panel h3{margin:0 0 12px 0;font-size:16px}
-.muted{color:var(--muted)}
+.muted{color:#6b7280}
 .small{font-size:13px;color:var(--muted)}
 .chart-wrap{height:320px}
 
@@ -325,376 +325,170 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
 
         <div style="margin-top:12px">
           <h4>Site verification</h4>
-          <p class="muted">Toggle verification (client-side simulation)</p>
-          <button class="btn ghost" id="toggleVerify">Toggle verify</button>
-          <div id="verifyMsg" class="muted" style="margin-top:8px"></div>
+          <p class="muted">Verify domain to enable real Search Console integration (simulated here).</p>
         </div>
       </section>
-
     </main>
   </div>
 </div>
 
-<!-- Send modal -->
-<div class="modal-backdrop" id="sendModal" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div style="display:flex;align-items:center;gap:12px">
-      <h4 style="margin:0">Send funds</h4>
-      <button class="close-x" onclick="closeModal('sendModal')">✕</button>
-    </div>
-    <form id="modalSendForm" style="margin-top:10px">
-      <label>Recipient</label>
-      <input id="modalTo" class="input-text" placeholder="Address or email"/><br/>
-      <label>Amount</label>
-      <input id="modalAmount" type="number" class="input-text" placeholder="0.00"/><br/>
-      <label>Note</label>
-      <input id="modalNote" class="input-text" placeholder="Optional"/><br/>
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button class="btn" type="submit">Confirm send</button>
-        <button class="btn ghost" type="button" onclick="closeModal('sendModal')">Cancel</button>
-      </div>
-      <div id="modalSendMsg" style="color:#c00;margin-top:8px"></div>
-    </form>
-  </div>
-</div>
-
-<!-- Receive modal -->
-<div class="modal-backdrop" id="receiveModal" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div style="display:flex;align-items:center;gap:12px">
-      <h4 style="margin:0">Receive funds</h4>
-      <button class="close-x" onclick="closeModal('receiveModal')">✕</button>
-    </div>
-    <div style="margin-top:10px">
-      <p class="muted">Share this address to receive funds:</p>
-      <div style="padding:12px;background:#f8fafc;border-radius:8px;word-break:break-all" id="modalReceiveAddr"></div>
-      <div style="margin-top:10px">
-        <button class="btn" id="modalCopyAddr">Copy</button>
-        <button class="btn ghost" onclick="closeModal('receiveModal')">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-/* -----------------------
-   Single-file Riches Dashboard
-   ----------------------- */
-
-function $(id){ return document.getElementById(id); }
-function fmtN(n){ return '₦' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
-
-const STORAGE_KEY = 'riches_dashboard_state_v1';
-let state = {
-  profile: { name: 'Riches User', email: 'user@example.com' },
-  wallet: { balance: 5000000.00, address: 'rcv-RICHES-0001' }, // 5,000,000 naira initial
-  tx: [],
-  verified: true,
-  newsKey: null,
-  theme: 'auto'
+// ------------------------- STATE -------------------------
+const state = {
+  view: 'home',
+  theme: 'auto',
+  wallet: { balance: 5000000, transactions: [] },
+  homeData: { clicks: [], impressions: [], ctr: [], position: [] },
+  dashData: { queries: [] },
+  receiveAddr: '0xRICHESDEMOADDRESS1234567890'
 };
 
-function loadState(){
-  try{
-    const s = localStorage.getItem(STORAGE_KEY);
-    if(s) {
-      const parsed = JSON.parse(s);
-      // keep wallet.balance default if missing to ensure 5M on first-run
-      state = Object.assign(state, parsed);
-      if(typeof state.wallet?.balance !== 'number') state.wallet.balance = 5000000;
-    }
-  }catch(e){ console.warn('load state failed', e); }
-}
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+// ------------------------- UTIL -------------------------
+const $ = id => document.getElementById(id);
+const formatNaira = n => '₦' + Number(n).toLocaleString();
 
-/* Init */
-loadState();
-syncProfileUI();
-syncWalletUI();
-applyTheme(state.theme);
-
-/* Navigation wiring */
-document.querySelectorAll('.nav button').forEach(btn=>{
-  btn.addEventListener('click', (ev)=>{
-    const view = btn.getAttribute('data-view');
-    activateNavButton(btn);
-    showView(view);
-  });
-});
-function activateNavButton(btn){
+// ------------------------- NAV -------------------------
+document.querySelectorAll('.nav button').forEach(btn => btn.addEventListener('click', e=>{
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  e.target.classList.add('active');
+  const view = e.target.dataset.view;
+  switchView(view);
+}));
+
+function switchView(view){
+  state.view = view;
+  $('pageTitle').textContent = view.charAt(0).toUpperCase() + view.slice(1);
+  document.querySelectorAll('section[id^="view-"]').forEach(s=>s.classList.add('hidden'));
+  $('view-'+view).classList.remove('hidden');
 }
 
-/* Show/Hide views */
-function hideAllViews(){
-  ['view-home','view-dashboard','view-wallet','view-send','view-receive','view-settingsPanel'].forEach(id=>{
-    const el = $(id); if(el) el.classList.add('hidden');
-  });
-}
-function showView(name){
-  $('pageTitle').textContent = (name==='home')? 'Home' : name.charAt(0).toUpperCase() + name.slice(1);
-  hideAllViews();
-  if(name==='home') $('view-home').classList.remove('hidden');
-  if(name==='dashboard'){ $('view-dashboard').classList.remove('hidden'); renderDashboard(); }
-  if(name==='wallet'){ $('view-wallet').classList.remove('hidden'); renderTxList(); }
-  if(name==='send'){ $('view-send').classList.remove('hidden'); }
-  if(name==='receive'){ $('view-receive').classList.remove('hidden'); $('receiveAddress').textContent = state.wallet.address; }
-  if(name==='settings'){ $('view-settingsPanel').classList.remove('hidden'); populateSettings(); }
-  document.title = 'Riches Dashboard • ' + $('pageTitle').textContent;
+// ------------------------- WALLET -------------------------
+function syncWalletUI(){
+  $('walletBalance').textContent = formatNaira(state.wallet.balance);
+  $('homeBalance').textContent = formatNaira(state.wallet.balance);
+  $('receiveAddress').textContent = state.receiveAddr;
 }
 
-/* Start at Home */
-showView('home');
+function openReceive(){switchView('receive');}
+function openSend(){switchView('send');}
 
-/* Controls */
-$('themeToggle').addEventListener('click', ()=>{
-  const newTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
-  setTheme(newTheme);
-});
-$('refreshBtn').addEventListener('click', ()=> { refreshAll(); });
-$('verifyBtn').addEventListener('click', ()=> { toggleVerify(); });
-$('exportBtn').addEventListener('click', exportSnapshot);
-
-/* Send / Receive modal handling */
-function openSend(){
-  showView('send');
-  $('modalTo').value=''; $('modalAmount').value=''; $('modalNote').value='';
-  $('sendModal').style.display='flex'; $('sendModal').setAttribute('aria-hidden','false');
-}
-function openReceive(){
-  $('modalReceiveAddr').textContent = state.wallet.address;
-  $('receiveModal').style.display='flex'; $('receiveModal').setAttribute('aria-hidden','false');
-}
-function closeModal(id){ $(id).style.display='none'; $(id).setAttribute('aria-hidden','true'); }
-
-/* Modal submit: send */
-$('modalSendForm').addEventListener('submit', (e)=>{
-  e.preventDefault();
-  const to = $('modalTo').value.trim();
-  const amount = parseFloat($('modalAmount').value);
-  const note = $('modalNote').value.trim();
-  if(!to || isNaN(amount) || amount <= 0){ $('modalSendMsg').textContent='Enter valid recipient and amount'; return; }
-  if(amount > state.wallet.balance){ $('modalSendMsg').textContent='Insufficient funds'; return; }
-  state.wallet.balance -= amount;
-  const tx = { id: 'tx'+Date.now(), date: new Date().toISOString(), type:'Sent', amount, note, to };
-  state.tx.unshift(tx);
-  saveState(); syncWalletUI(); renderTxList();
-  $('modalSendMsg').textContent='Sent ✓';
-  setTimeout(()=> closeModal('sendModal'), 900);
-});
-
-/* Copy address */
-$('modalCopyAddr').addEventListener('click', ()=> navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Address copied')));
-$('copyAddr').addEventListener('click', ()=> navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Copied')));
-
-/* Inline send form */
-$('sendForm').addEventListener('submit', (e)=>{
+$('sendForm').addEventListener('submit', e=>{
   e.preventDefault();
   const to = $('sendTo').value.trim();
-  const amount = parseFloat($('sendAmount').value);
+  const amt = parseFloat($('sendAmount').value);
   const note = $('sendNote').value.trim();
-  if(!to || isNaN(amount) || amount <= 0){ $('sendMsg').textContent='Enter valid recipient and amount'; return; }
-  if(amount > state.wallet.balance){ $('sendMsg').textContent='Insufficient funds'; return; }
-  state.wallet.balance -= amount;
-  const tx = { id:'tx'+Date.now(), date: new Date().toISOString(), type:'Sent', amount, note, to };
-  state.tx.unshift(tx);
-  saveState(); syncWalletUI(); renderTxList(); $('sendMsg').textContent='Sent ✓';
-  setTimeout(()=> { $('sendMsg').textContent=''; showView('wallet'); }, 700);
-});
-
-/* Simulate receive (for testing) */
-function simulateReceive(amount=randInt(1000,50000), note='Deposit'){
-  state.wallet.balance += amount;
-  const tx = { id:'tx'+Date.now(), date:new Date().toISOString(), type:'Received', amount, note, from:'external' };
-  state.tx.unshift(tx);
-  saveState(); syncWalletUI(); renderTxList();
-  alert('Received ' + fmtN(amount));
-}
-
-/* Wallet UI sync */
-function syncWalletUI(){
-  $('homeBalance').textContent = fmtN(state.wallet.balance);
-  $('walletBalance').textContent = fmtN(state.wallet.balance);
-  $('receiveAddress').textContent = state.wallet.address;
-  saveState();
-}
-
-/* Transactions render */
-function renderTxList(){
-  const tbody = $('txTbody');
-  tbody.innerHTML = '';
-  if(!state.tx || state.tx.length===0){
-    tbody.innerHTML = '<tr><td colspan="4" class="muted">No transactions yet</td></tr>'; return;
-  }
-  state.tx.forEach(t=>{
-    const d = new Date(t.date).toLocaleString();
-    tbody.insertAdjacentHTML('beforeend', `<tr><td>${d}</td><td>${t.type}</td><td>${fmtN(t.amount)}</td><td>${t.note || t.to || t.from || ''}</td></tr>`);
-  });
-}
-$('exportTx')?.addEventListener('click', ()=>{
-  const rows=[['Date','Type','Amount','Note']];
-  state.tx.forEach(t=> rows.push([new Date(t.date).toISOString(), t.type, t.amount, t.note||'']));
-  const csv = rows.map(r=> r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-});
-
-/* Performance generation + charts */
-let homeChart=null, dashChart=null;
-function generatePerformance(days=28){
-  const labels=[], clicks=[], impressions=[], ctr=[], pos=[];
-  for(let i=days-1;i>=0;i--){
-    const d=new Date(); d.setDate(d.getDate()-i);
-    labels.push(d.toISOString().slice(0,10));
-    const impr = randInt(400,3500);
-    const clk = Math.max(0, Math.floor(impr*(0.01 + Math.random()*0.07)));
-    clicks.push(clk); impressions.push(impr);
-    ctr.push(Number(((clk/impr)*100).toFixed(2)));
-    pos.push(Number((1 + Math.random()*30).toFixed(2)));
-  }
-  return {labels, clicks, impressions, ctr, pos};
-}
-function renderHomeChart(){
-  const data = generatePerformance(parseInt($('range').value,10));
-  $('m-clicks').textContent = data.clicks.reduce((a,b)=>a+b,0).toLocaleString();
-  $('m-impr').textContent = data.impressions.reduce((a,b)=>a+b,0).toLocaleString();
-  $('m-ctr').textContent = (data.ctr.reduce((a,b)=>a+b,0)/data.ctr.length).toFixed(1) + '%';
-  $('m-pos').textContent = (data.pos.reduce((a,b)=>a+b,0)/data.pos.length).toFixed(2);
-
-  const ctx = $('homeChart').getContext('2d');
-  if(homeChart) homeChart.destroy();
-  homeChart = new Chart(ctx, {
-    type:'line',
-    data:{ labels:data.labels, datasets:[{ label:'Clicks', data:data.clicks, borderColor:'#1a73e8', backgroundColor:'rgba(26,115,232,0.06)', fill:true, tension:0.25 }]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-  });
-}
-function renderDashboard(){
-  const metric = $('metricSelect').value;
-  const days = parseInt($('range').value,10);
-  const data = generatePerformance(days);
-  const dataset = (metric==='clicks') ? data.clicks : (metric==='impressions' ? data.impressions : (metric==='ctr' ? data.ctr : data.pos));
-  const ctx = $('dashChart').getContext('2d');
-  if(dashChart) dashChart.destroy();
-  dashChart = new Chart(ctx, {
-    type:'line',
-    data:{ labels:data.labels, datasets:[{ label:metric, data:dataset, borderColor:'#0b74ff', backgroundColor:'rgba(11,116,255,0.06)', fill:true, tension:0.2 }]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-  });
-
-  const qbody = $('dashQueries'); qbody.innerHTML='';
-  const sampleQs = ['example query','how to setup','best tools','learn seo','dashboard tutorial','site verification','performance tips','analytics guide'];
-  sampleQs.forEach(q=>{
-    const clicks = randInt(10,900); const impr = clicks * randInt(10,80);
-    qbody.insertAdjacentHTML('beforeend', `<tr><td>${q}</td><td>${clicks.toLocaleString()}</td><td>${impr.toLocaleString()}</td><td>${((clicks/impr)*100).toFixed(1)}%</td></tr>`);
-  });
-}
-
-/* News widget: clickable Google News link already present; optionally show simulated headlines below the link */
-function fetchNews(){
-  const newsList = $('newsList');
-  // ensure Google News link remains at top (already added in HTML). Append simulated headlines afterward
-  const sims = [
-    {t:'Search Console tips for 2025', s:'Console News'},
-    {t:'New SEO patterns emerging', s:'SEO Daily'},
-    {t:'How to verify your site quickly', s:'Webmaster Blog'}
-  ];
-  sims.forEach(s=>{
-    const el = document.createElement('div'); el.className='news-item';
-    el.innerHTML = `<div style="font-weight:700">${s.t}</div><div class="muted small">${s.s}</div>`;
-    newsList.appendChild(el);
-  });
-}
-
-/* Refresh routine */
-function refreshAll(){
-  renderHomeChart();
-  if(!homeChart) renderHomeChart();
-  if(!$('view-dashboard').classList.contains('hidden')) renderDashboard();
-  fetchNews();
+  if(!to || isNaN(amt) || amt<=0){$('sendMsg').textContent='Invalid recipient or amount';return;}
+  if(amt>state.wallet.balance){$('sendMsg').textContent='Insufficient balance';return;}
+  state.wallet.balance -= amt;
+  state.wallet.transactions.push({date:new Date().toLocaleDateString(), type:'Send', amount:amt, note});
   syncWalletUI();
-}
-
-/* Settings */
-$('saveProfile')?.addEventListener('click', ()=>{
-  state.profile.name = $('profileName').value || state.profile.name;
-  state.profile.email = $('profileEmail').value || state.profile.email;
-  state.newsKey = $('newsKey').value || null;
-  if(state.newsKey) localStorage.setItem('news_api_key', state.newsKey);
-  state.theme = $('themeSelect').value||state.theme;
-  saveState(); syncProfileUI(); alert('Settings saved');
+  $('sendMsg').textContent='Transaction successful!';
+  $('sendForm').reset();
 });
-$('toggleVerify')?.addEventListener('click', ()=> toggleVerify());
-function populateSettings(){
-  $('profileName').value = state.profile.name || '';
-  $('profileEmail').value = state.profile.email || '';
-  $('newsKey').value = state.newsKey || localStorage.getItem('news_api_key') || '';
-  $('themeSelect').value = state.theme || 'auto';
-  $('verifyMsg').textContent = state.verified ? 'Site is marked verified (client-side).' : 'Site is not verified';
-}
 
-/* Verify toggle */
-function toggleVerify(){
-  state.verified = !state.verified;
-  $('siteStatus').textContent = state.verified ? 'Verified' : 'Not verified';
-  $('verifyMsg') && ($('verifyMsg').textContent = state.verified ? 'Site verified (client-side simulated).' : 'Site not verified');
-  saveState();
-}
-
-/* Profile UI */
-function syncProfileUI(){
-  $('siteName').textContent = state.profile.name ? state.profile.name.toLowerCase().replace(/\s+/g,'') + '.example' : 'example.com';
-  $('profileName') && ($('profileName').value = state.profile.name);
-  $('profileEmail') && ($('profileEmail').value = state.profile.email);
-  $('homeBalance').textContent = fmtN(state.wallet.balance);
-}
-
-/* Settings population on start */
-function populateSettingsOnStart(){
-  $('profileName') && ($('profileName').value = state.profile.name);
-  $('profileEmail') && ($('profileEmail').value = state.profile.email);
-  $('newsKey') && ($('newsKey').value = state.newsKey || localStorage.getItem('news_api_key') || '');
-  $('themeSelect') && ($('themeSelect').value = state.theme || 'auto');
-}
-populateSettingsOnStart();
-
-/* Theme handling */
-function setTheme(t){
-  if(t==='dark'){ document.body.classList.add('dark'); state.theme='dark'; }
-  else if(t==='light'){ document.body.classList.remove('dark'); state.theme='light'; }
-  else { // auto
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
-    document.body.classList.toggle('dark', prefersDark);
-    state.theme='auto';
+// ------------------------- HOME METRICS -------------------------
+let homeChart = null;
+function generatePerformance(days){
+  const clicks=[],impr=[],ctr=[],pos=[];
+  for(let i=0;i<days;i++){
+    const c=Math.floor(Math.random()*1000+500);
+    const i2=Math.floor(Math.random()*10000+5000);
+    clicks.push(c);
+    impr.push(i2);
+    ctr.push(+(c/i2*100).toFixed(2));
+    pos.push(+(Math.random()*10+1).toFixed(2));
   }
-  saveState();
+  return {clicks,impr,ctr,pos};
 }
-function applyTheme(t){
-  if(t==='dark') document.body.classList.add('dark');
-  else if(t==='light') document.body.classList.remove('dark');
-  else { const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches; document.body.classList.toggle('dark', prefersDark); }
-}
-applyTheme(state.theme);
 
-/* Keyboard shortcuts */
-window.addEventListener('keydown',(e)=>{
-  if(e.key === '1') document.querySelector('.nav button[data-view="home"]').click();
-  if(e.key === '2') document.querySelector('.nav button[data-view="dashboard"]').click();
-  if(e.key === '3') document.querySelector('.nav button[data-view="wallet"]').click();
+function renderHomeChart(){
+  const days=parseInt($('range').value,10);
+  const data = generatePerformance(days);
+  state.homeData = data;
+
+  // update cards with latest and delta
+  const lastIdx = data.clicks.length-1;
+  const delta = (arr)=>arr[lastIdx]-arr[lastIdx-1]||0;
+  $('m-clicks').textContent = data.clicks[lastIdx].toLocaleString();
+  $('d-clicks').textContent = (delta(data.clicks)>=0?'+':'')+delta(data.clicks).toLocaleString();
+  $('m-impr').textContent = data.impr[lastIdx].toLocaleString();
+  $('d-impr').textContent = (delta(data.impr)>=0?'+':'')+delta(data.impr).toLocaleString();
+  $('m-ctr').textContent = data.ctr[lastIdx]+'%';
+  $('d-ctr').textContent = (delta(data.ctr)>=0?'+':'')+delta(data.ctr).toFixed(2)+'%';
+  $('m-pos').textContent = data.position[lastIdx];
+  $('d-pos').textContent = (delta(data.position)>=0?'+':'')+delta(data.position).toFixed(2);
+
+  const labels = Array.from({length:days},(_,i)=>`Day ${i+1}`);
+  if(homeChart) homeChart.destroy();
+  const ctx=$('homeChart').getContext('2d');
+  homeChart = new Chart(ctx,{
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Clicks',data:data.clicks,borderColor:'#1a73e8',tension:0.3},
+      {label:'Impressions',data:data.impr,borderColor:'#0b5bd7',tension:0.3},
+      {label:'CTR',data:data.ctr,borderColor:'#16a34a',tension:0.3},
+      {label:'Position',data:data.position,borderColor:'#ea4335',tension:0.3}
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'top'}}}
+  });
+}
+
+// ------------------------- DASHBOARD -------------------------
+let dashChart = null;
+function generateDashboard(){
+  const days=parseInt($('range').value,10);
+  const queries=[];
+  for(let i=0;i<10;i++){
+    queries.push({
+      query:'example query '+(i+1),
+      clicks:Math.floor(Math.random()*1000),
+      impressions:Math.floor(Math.random()*5000),
+      ctr:+(Math.random()*100).toFixed(2)
+    });
+  }
+  state.dashData.queries = queries;
+  renderDashboard();
+}
+
+function renderDashboard(){
+  const metric=$('metricSelect').value;
+  const data = state.dashData.queries.map(q=>q[metric==='ctr'? 'ctr':metric==='position'? 'position':'clicks']);
+  const labels = state.dashData.queries.map(q=>q.query);
+  if(dashChart) dashChart.destroy();
+  const ctx = $('dashChart').getContext('2d');
+  dashChart = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:metric.charAt(0).toUpperCase()+metric.slice(1),data,borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,0.2)'}]},
+    options:{responsive:true,plugins:{legend:{display:false}}}
+  });
+
+  const tbody = $('dashQueries');
+  tbody.innerHTML = '';
+  state.dashData.queries.forEach(q=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${q.query}</td><td>${q.clicks}</td><td>${q.impressions}</td><td>${q.ctr}%</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ------------------------- INIT -------------------------
+$('range').addEventListener('change',()=>{
+  renderHomeChart();
+  generateDashboard();
+});
+$('metricSelect').addEventListener('change',renderDashboard);
+
+$('refreshBtn').addEventListener('click',()=>{
+  renderHomeChart();
+  generateDashboard();
 });
 
-/* Initial actions */
-refreshAll();
-renderTxList();
+$('copyAddr').addEventListener('click',()=>navigator.clipboard.writeText(state.receiveAddr).then(()=>alert('Address copied!')));
+
+// init
 syncWalletUI();
-
-/* Save before unload */
-window.addEventListener('beforeunload', ()=> saveState());
-
-/* Expose some helpers for debugging */
-window.__RICHES = { state, refreshAll, simulateReceive, saveState };
+renderHomeChart();
+generateDashboard();
 
 </script>
 </body>

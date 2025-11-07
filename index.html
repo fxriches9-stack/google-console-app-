@@ -1,19 +1,500 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Google Console App</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Search Console — Performance</title>
+
+  <!-- Chart.js (stable CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f5f7fb; --card:#fff; --muted:#6b7280; --accent:#1a73e8;
+      --accent-2:#0b5bd7; --success:#34a853; --danger:#ea4335; --radius:12px;
+      --glass: rgba(255,255,255,0.7);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg,#eef2ff 0%,var(--bg) 100%);
+      color:#0f1724;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      min-height:100vh;
+    }
+
+    /* App layout */
+    .app {
+      display:flex;
+      gap:18px;
+      padding:18px;
+      min-height:calc(100vh - 36px);
+      align-items:flex-start;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      width:260px;
+      background: linear-gradient(180deg,#fff,#fbfdff);
+      border-radius:var(--radius);
+      padding:18px;
+      border:1px solid #e6eef8;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      box-shadow:0 6px 18px rgba(11,20,45,0.04);
+    }
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--accent);font-size:15px}
+    .logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-family:var(--mono)}
+    .subtitle{font-size:13px;color:var(--muted)}
+    .nav{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+    .nav button{background:transparent;border:none;text-align:left;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;color:#0f1724}
+    .nav button.small{font-weight:600;color:var(--muted);font-size:13px}
+    .nav button.active{background:linear-gradient(90deg, rgba(26,115,232,0.08), rgba(26,115,232,0.02));color:var(--accent)}
+    .sidebar .small{font-size:12px;color:var(--muted)}
+    .sidebar .footer{margin-top:auto;font-size:12px;color:var(--muted)}
+
+    /* Main area */
+    .main{flex:1;display:flex;flex-direction:column;gap:14px}
+    .topbar{display:flex;align-items:center;gap:12px}
+    .property{display:flex;align-items:center;gap:12px;background:var(--card);padding:10px 12px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 3px rgba(12,18,28,0.03)}
+    .property .name{font-weight:800}
+    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+    .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+    .btn.ghost{background:transparent;border:1px solid rgba(13,110,253,0.12);color:var(--accent)}
+    .btn.small{padding:6px 8px;font-size:14px}
+
+    /* Cards */
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .card{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 6px rgba(12,18,28,0.03)}
+    .metric{font-size:20px;font-weight:800}
+    .metric-sub{font-size:13px;color:var(--muted);margin-top:6px}
+    .delta{font-size:13px;margin-left:8px}
+
+    /* Content */
+    .content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+    .panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
+    .panel h3{margin:0 0 12px 0;font-size:16px}
+    .muted{color:var(--muted)}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* Chart container */
+    .chart-wrap{height:320px}
+
+    /* table */
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    thead th{font-weight:700;text-align:left;color:var(--muted);padding:8px 6px;border-bottom:1px dashed #eef2ff}
+    tbody td{padding:10px 6px;border-bottom:1px solid #f5f8fb}
+    .badge{display:inline-block;background:#f3f9f5;color:var(--success);padding:6px 8px;border-radius:999px;font-weight:700;font-size:13px}
+
+    /* responsive */
+    @media (max-width:1000px){
+      .sidebar{display:none}
+      .cards{grid-template-columns:repeat(2,1fr)}
+      .content{grid-template-columns:1fr;gap:10px}
+    }
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(11,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:60}
+    .modal{background:var(--card);padding:18px;border-radius:12px;max-width:520px;width:92%;box-shadow:0 10px 40px rgba(11,20,45,0.12)}
+    .modal h4{margin:0 0 8px 0}
+    .row{display:flex;gap:8px;margin-top:8px}
+    .close-x{margin-left:auto;border:none;background:transparent;font-size:18px;cursor:pointer}
+    .input-text{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eef8}
+
+    /* subtle link */
+    .link{color:var(--accent);cursor:pointer;text-decoration:underline;font-weight:700}
+  </style>
 </head>
 <body>
-  <div id="console">
-    <div id="output">Google Console App initialized. Type "help" for commands.</div>
-    <div id="input-line">
-      <span>&gt;</span>
-      <input type="text" id="input" autofocus />
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="logo">SC</div>
+        <div>
+          Console
+          <div class="subtitle">Search performance & reports</div>
+        </div>
+      </div>
+
+      <div class="nav" role="navigation">
+        <button class="active" data-view="overview">Overview</button>
+        <button data-view="performance">Performance</button>
+        <button data-view="coverage">Coverage</button>
+        <button data-view="enhancements">Enhancements</button>
+        <button class="small" id="verify-button">Verify site</button>
+      </div>
+
+      <div class="small">Properties</div>
+      <div class="property" style="padding:10px">
+        <div style="font-weight:700">example.com</div>
+        <div class="muted" style="font-size:13px">Verified</div>
+      </div>
+
+      <div class="footer">© Project — client-side dashboard</div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <div class="property" aria-hidden="true">
+          <div style="display:flex;flex-direction:column">
+            <div class="name">example.com</div>
+            <div class="muted small">Performance overview</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <select id="range" class="input-text" style="width:160px;padding:8px;border-radius:8px;border:1px solid #e6eef8">
+            <option value="7">Last 7 days</option>
+            <option value="28" selected>Last 28 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last 12 months</option>
+          </select>
+
+          <button id="refresh" class="btn small">Refresh data</button>
+          <button id="export" class="btn ghost small">Export</button>
+        </div>
+      </div>
+
+      <!-- CARDS -->
+      <div class="cards" role="region" aria-label="Key metrics">
+        <div class="card">
+          <div class="metric" id="metric-clicks">0</div>
+          <div class="metric-sub">Clicks <span class="delta" id="delta-clicks"></span></div>
+        </div>
+        <div class="card">
+          <div class="metric" id="metric-impr">0</div>
+          <div class="metric-sub">Impressions <span class="delta" id="delta-impr"></span></div>
+        </div>
+        <div class="card">
+          <div class="metric" id="metric-ctr">0%</div>
+          <div class="metric-sub">Average CTR <span class="delta" id="delta-ctr"></span></div>
+        </div>
+        <div class="card">
+          <div class="metric" id="metric-pos">0.0</div>
+          <div class="metric-sub">Average position <span class="delta" id="delta-pos"></span></div>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+        <!-- LEFT: Chart & table -->
+        <section class="panel" id="overview-panel">
+          <h3>Performance</h3>
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+            <div class="small muted">Metric</div>
+            <select id="metric-select" class="input-text" style="width:150px">
+              <option value="clicks">Clicks</option>
+              <option value="impressions">Impressions</option>
+              <option value="ctr">CTR</option>
+              <option value="position">Position</option>
+            </select>
+            <div style="margin-left:auto" class="small muted">Showing synthetic data</div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="perfChart" width="800" height="300" aria-label="Performance chart"></canvas>
+          </div>
+
+          <div style="margin-top:14px">
+            <h4 style="margin:0 0 8px 0">Top queries</h4>
+            <div style="overflow:auto;max-height:180px">
+              <table aria-label="Top queries">
+                <thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead>
+                <tbody id="queries-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT: Top pages -->
+        <aside class="panel">
+          <h3>Top pages</h3>
+          <div style="overflow:auto;max-height:420px">
+            <table aria-label="Top pages">
+              <thead><tr><th>Page</th><th>Clicks</th><th>Impressions</th></tr></thead>
+              <tbody id="pages-tbody"></tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <div class="small muted">Status</div>
+            <div class="badge" id="status-badge">Valid</div>
+            <div style="margin-left:auto">
+              <button class="btn small" id="open-coverage">Open Coverage</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Verify site -->
+  <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal" role="document">
+      <div style="display:flex;align-items:center;gap:12px">
+        <h4 style="margin:0">Verify site</h4>
+        <button class="close-x" id="close-modal" title="Close">✕</button>
+      </div>
+      <p class="small muted" style="margin:8px 0 0 0">Choose a verification method. The verification here is simulated client-side.</p>
+
+      <div class="row" style="margin-top:12px">
+        <select id="verify-method" class="input-text">
+          <option value="html">HTML file upload</option>
+          <option value="meta">HTML tag</option>
+          <option value="dns">DNS record</option>
+        </select>
+        <button id="do-verify" class="btn small">Verify</button>
+      </div>
+
+      <div id="verify-result" style="margin-top:12px" class="small muted"></div>
     </div>
   </div>
-  <script src="script.js"></script>
+
+  <script>
+    // Utilities
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function formatNumber(n){ return n.toLocaleString(); }
+    function pct(n,dec=1){ return (Math.round(n*10**dec)/10**dec) + '%'; }
+
+    // Mock data generator
+    function generateData(days){
+      const labels = [];
+      const clicks = [];
+      const impressions = [];
+      const ctr = [];
+      const position = [];
+
+      for(let i=days-1;i>=0;i--){
+        const d = new Date();
+        d.setDate(d.getDate()-i);
+        labels.push(d.toISOString().slice(0,10));
+        const baseImpr = randInt(800,4000);
+        const dailyImpr = Math.round(baseImpr * (0.85 + Math.random()*0.3));
+        const dailyClicks = Math.round(dailyImpr * (0.02 + Math.random()*0.08));
+        const dailyCtr = dailyImpr ? (dailyClicks/dailyImpr)*100 : 0;
+        const dailyPos = (1 + Math.random()*30);
+
+        impressions.push(dailyImpr);
+        clicks.push(dailyClicks);
+        ctr.push(parseFloat(dailyCtr.toFixed(2)));
+        position.push(parseFloat(dailyPos.toFixed(2)));
+      }
+      return {labels, clicks, impressions, ctr, position};
+    }
+
+    // Initial render
+    const rangeSelect = document.getElementById('range');
+    const metricSelect = document.getElementById('metric-select');
+    const refreshBtn = document.getElementById('refresh');
+    const exportBtn = document.getElementById('export');
+
+    let currentData = generateData(28);
+
+    // Chart setup
+    const ctx = document.getElementById('perfChart').getContext('2d');
+    const chartConfig = {
+      type: 'line',
+      data: {
+        labels: currentData.labels,
+        datasets: [{
+          label: 'Clicks',
+          data: currentData.clicks,
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 2,
+          borderColor: '#1a73e8',
+          backgroundColor: 'rgba(26,115,232,0.06)',
+          fill: true
+        }]
+      },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins: {
+          legend:{display:false},
+          tooltip:{mode:'index',intersect:false}
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{maxRotation:0}},
+          y:{grid:{color:'#eef4ff'}}
+        }
+      }
+    };
+    const perfChart = new Chart(ctx, chartConfig);
+
+    // UI elements for metrics
+    const elClicks = document.getElementById('metric-clicks');
+    const elImpr = document.getElementById('metric-impr');
+    const elCtr = document.getElementById('metric-ctr');
+    const elPos = document.getElementById('metric-pos');
+
+    function updateMetrics(data){
+      const totalClicks = data.clicks.reduce((a,b)=>a+b,0);
+      const totalImpr = data.impressions.reduce((a,b)=>a+b,0);
+      const avgCtr = totalImpr ? (totalClicks/totalImpr)*100 : 0;
+      const avgPos = (data.position.reduce((a,b)=>a+b,0))/data.position.length;
+
+      elClicks.textContent = formatNumber(totalClicks);
+      elImpr.textContent = formatNumber(totalImpr);
+      elCtr.textContent = avgCtr.toFixed(1) + '%';
+      elPos.textContent = avgPos.toFixed(2);
+      // deltas (simple random +/-)
+      document.getElementById('delta-clicks').textContent = (randInt(-6,12)) + '%';
+      document.getElementById('delta-impr').textContent = (randInt(-5,10)) + '%';
+      document.getElementById('delta-ctr').textContent = (randInt(-3,8)) + '%';
+      document.getElementById('delta-pos').textContent = (randInt(-6,6)) + '%';
+    }
+
+    function renderTables(data){
+      const queriesTbody = document.getElementById('queries-tbody');
+      const pagesTbody = document.getElementById('pages-tbody');
+      queriesTbody.innerHTML = '';
+      pagesTbody.innerHTML = '';
+
+      // Top queries: pick random queries
+      const sampleQueries = ['how to use app','best tools 2025','example query','get help','search console guide','dashboard tutorial','learn seo','site verification','analytics overview','performance tips'];
+      const qList = sampleQueries.sort(()=>0.5-Math.random()).slice(0,8);
+      qList.forEach(q=>{
+        const idx = randInt(0,data.labels.length-1);
+        const clicks = randInt(10,200);
+        const impr = clicks * randInt(10,60);
+        const ctr = impr ? ((clicks/impr)*100).toFixed(1)+'%' : '0%';
+        const tr = `<tr><td>${q}</td><td>${formatNumber(clicks)}</td><td>${formatNumber(impr)}</td><td>${ctr}</td></tr>`;
+        queriesTbody.insertAdjacentHTML('beforeend',tr);
+      });
+
+      // Top pages: create a few sample pages
+      for(let i=1;i<=8;i++){
+        const clicks = randInt(20,400);
+        const impr = clicks * randInt(15,80);
+        const tr = `<tr><td>/article-${i}</td><td>${formatNumber(clicks)}</td><td>${formatNumber(impr)}</td></tr>`;
+        pagesTbody.insertAdjacentHTML('beforeend',tr);
+      }
+    }
+
+    function refreshAll(){
+      const days = parseInt(rangeSelect.value,10) || 28;
+      currentData = generateData(days);
+
+      // update chart dataset and label depending on selected metric
+      const metric = metricSelect.value;
+      let dataset, label, yAxisLabel;
+      switch(metric){
+        case 'clicks': dataset=currentData.clicks; label='Clicks'; break;
+        case 'impressions': dataset=currentData.impressions; label='Impressions'; break;
+        case 'ctr': dataset=currentData.ctr; label='CTR'; break;
+        case 'position': dataset=currentData.position.slice().reverse(); label='Position'; break;
+        default: dataset=currentData.clicks; label='Clicks';
+      }
+
+      perfChart.data.labels = currentData.labels;
+      perfChart.data.datasets[0].label = label;
+      perfChart.data.datasets[0].data = dataset;
+      // style changes
+      if(metric==='position'){
+        perfChart.data.datasets[0].borderColor = '#ea4335';
+        perfChart.data.datasets[0].backgroundColor = 'rgba(234,67,53,0.06)';
+      } else {
+        perfChart.data.datasets[0].borderColor = '#1a73e8';
+        perfChart.data.datasets[0].backgroundColor = 'rgba(26,115,232,0.06)';
+      }
+      perfChart.update();
+
+      updateMetrics(currentData);
+      renderTables(currentData);
+    }
+
+    // Initial render
+    refreshAll();
+
+    // Events
+    refreshBtn.addEventListener('click', ()=>{ refreshAll(); });
+    rangeSelect.addEventListener('change', ()=>{ refreshAll(); });
+    metricSelect.addEventListener('change', ()=>{ refreshAll(); });
+
+    // Export (CSV of top pages)
+    exportBtn.addEventListener('click', ()=>{
+      // simple CSV of current top pages table
+      const rows = [['Page','Clicks','Impressions']];
+      const rowsEl = document.querySelectorAll('#pages-tbody tr');
+      rowsEl.forEach(r=>{
+        const cols = Array.from(r.children).map(td=>td.textContent.trim());
+        rows.push(cols);
+      });
+      const csv = rows.map(r=>r.map(c=>`"${c.replace(/"/g,'""')}"`).join(',')).join('\\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'top-pages.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    // Modal verify flow (client-side simulated)
+    const verifyBtn = document.getElementById('verify-button');
+    const modal = document.getElementById('modal-backdrop');
+    const closeModal = document.getElementById('close-modal');
+    const doVerify = document.getElementById('do-verify');
+    const verifyMethod = document.getElementById('verify-method');
+    const verifyResult = document.getElementById('verify-result');
+
+    verifyBtn.addEventListener('click', ()=>{ modal.style.display='flex'; verifyResult.textContent='';});
+    closeModal.addEventListener('click', ()=>{ modal.style.display='none'; });
+    doVerify.addEventListener('click', ()=>{
+      const method = verifyMethod.value;
+      verifyResult.style.color = '#111827';
+      verifyResult.textContent = 'Verifying...';
+      setTimeout(()=>{
+        verifyResult.textContent = method === 'dns' ? 'Verification successful: DNS record found.' : 'Verification successful.';
+        document.getElementById('status-badge').textContent = 'Valid';
+        modal.style.display='none';
+      }, 900);
+    });
+
+    // navigation (visual)
+    document.querySelectorAll('.nav button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        // simple switch behavior: show/hide panels if needed
+        const view = btn.getAttribute('data-view');
+        if(view === 'overview' || view === 'performance'){
+          document.getElementById('overview-panel').style.display='block';
+        } else {
+          // For simplicity, show message in same panel for other views
+          document.getElementById('overview-panel').style.display='block';
+          // (Could swap content here if you extend)
+        }
+      });
+    });
+
+    // keyboard: press F to focus metric filter
+    window.addEventListener('keydown',(e)=>{
+      if(e.key.toLowerCase()==='f' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){
+        metricSelect.focus();
+        metricSelect.style.outline='2px solid rgba(26,115,232,0.2)';
+        setTimeout(()=>metricSelect.style.outline='none',800);
+      }
+    });
+
+    // Accessibility: close modal on ESC
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape') modal.style.display='none';
+    });
+
+    // small tweak: ensure layout resizes the chart
+    window.addEventListener('resize', ()=> { perfChart.resize(); });
+  </script>
 </body>
 </html>

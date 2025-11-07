@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Riches Dashboard — Console & Wallet</title>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <style>
@@ -30,7 +29,6 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .sidebar .small{font-size:12px;color:var(--muted)}
 .footer{margin-top:auto;font-size:12px;color:var(--muted)}
 
-/* main */
 .main{flex:1;display:flex;flex-direction:column;gap:14px}
 .topbar{display:flex;align-items:center;gap:12px}
 .property{display:flex;align-items:center;gap:12px;background:var(--card);padding:10px 12px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 3px rgba(12,18,28,0.03)}
@@ -40,73 +38,52 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .btn.ghost{background:transparent;border:1px solid rgba(13,110,253,0.12);color:var(--accent)}
 .btn.small{padding:6px 8px;font-size:14px}
 
-/* cards */
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.card{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 6px rgba(12,18,28,0.03)}
-.metric{font-size:20px;font-weight:800}
-.metric-sub{font-size:13px;color:var(--muted);margin-top:6px}
-.delta{font-size:13px;margin-left:8px}
+.card{background:var(--card);padding:12px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 6px rgba(12,18,28,0.03);cursor:pointer;position:relative}
+.card canvas{position:absolute;top:0;left:0;width:100%;height:50px;border-radius:8px;opacity:0.2;pointer-events:none}
+.metric{font-size:20px;font-weight:800;position:relative;z-index:1}
+.metric-sub{font-size:13px;color:var(--muted);margin-top:6px;position:relative;z-index:1}
+.delta{font-size:13px;margin-left:8px;position:relative;z-index:1}
 
-/* content */
-.content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.content{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px}
 .panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
-.panel h3{margin:0 0 12px 0;font-size:16px}
-.muted{color:#6b7280}
+.panel h3,h4{margin:0 0 12px 0;font-size:16px}
+.muted{color:var(--muted)}
 .small{font-size:13px;color:var(--muted)}
 .chart-wrap{height:320px}
 
-/* tables */
 table{width:100%;border-collapse:collapse;font-size:14px}
 thead th{font-weight:700;text-align:left;color:var(--muted);padding:8px 6px;border-bottom:1px dashed #eef2ff}
 tbody td{padding:10px 6px;border-bottom:1px solid #f5f8fb}
 .badge{display:inline-block;background:#f3f9f5;color:var(--success);padding:6px 8px;border-radius:999px;font-weight:700;font-size:13px}
 
-/* wallet */
 .wallet-header{display:flex;align-items:center;gap:12px;justify-content:space-between}
 .balance{font-size:28px;font-weight:800}
 .tx-list{max-height:260px;overflow:auto}
 
-/* modals */
 .modal-backdrop{position:fixed;inset:0;background:rgba(11,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:60}
 .modal{background:var(--card);padding:18px;border-radius:12px;max-width:520px;width:92%;box-shadow:0 10px 40px rgba(11,20,45,0.12)}
 .row{display:flex;gap:8px;margin-top:8px}
 .close-x{margin-left:auto;border:none;background:transparent;font-size:18px;cursor:pointer}
 .input-text{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eef8}
 
-/* news */
 .news-list{max-height:260px;overflow:auto}
 .news-item{padding:8px;border-bottom:1px solid #f4f7fb}
 .news-item a{color:var(--accent);text-decoration:none;font-weight:700}
-
-/* responsive */
-@media (max-width:1000px){
-  .sidebar{display:none}
-  .cards{grid-template-columns:repeat(2,1fr)}
-  .content{grid-template-columns:1fr;gap:10px}
-}
-
-/* dark mode */
-body.dark{background:#0b1220;color:#e6eef8}
-body.dark .card, body.dark .panel, body.dark .property, body.dark .sidebar, body.dark .modal{background:#0f1724;color:#e6eef8;border-color:#162032}
-body.dark .muted{color:#93a4b9}
-body.dark .nav button{color:#dbeafe}
-body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="app" role="application" aria-label="Riches Dashboard">
-    <!-- Sidebar -->
-    <aside class="sidebar" aria-label="Main navigation">
-      <div class="brand" aria-hidden="true">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
         <div class="logo">RD</div>
         <div>
           <div>Riches Dashboard</div>
           <div class="subtitle">Performance & Wallet</div>
         </div>
       </div>
-
-      <nav class="nav" role="navigation" aria-label="Primary">
+      <nav class="nav">
         <button class="active" data-view="home">Home</button>
         <button data-view="dashboard">Performance</button>
         <button data-view="wallet">Wallet</button>
@@ -114,218 +91,74 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
         <button data-view="receive">Receive</button>
         <button data-view="settings" class="small">Settings</button>
       </nav>
-
       <div class="small">Property</div>
-      <div class="property" style="padding:10px">
+      <div class="property">
         <div style="font-weight:700" id="siteName">example.com</div>
-        <div class="muted" style="font-size:13px" id="siteStatus">Verified</div>
+        <div class="muted small" id="siteStatus">Verified</div>
       </div>
-
       <div class="footer">© Riches Dashboard — demo app</div>
     </aside>
 
-    <!-- Main -->
-    <main class="main" id="mainArea">
-      <div class="topbar" role="region" aria-label="Topbar">
-        <div class="property" aria-hidden="true">
+    <main class="main">
+      <div class="topbar">
+        <div class="property">
           <div style="display:flex;flex-direction:column">
             <div class="name" id="pageTitle">Home</div>
             <div class="muted small">Overview & news</div>
           </div>
         </div>
-
-        <div class="controls" role="toolbar" aria-label="Controls">
+        <div class="controls">
           <select id="range" class="input-text" style="width:170px">
             <option value="7">Last 7 days</option>
             <option value="28" selected>Last 28 days</option>
             <option value="90">Last 90 days</option>
             <option value="365">Last 12 months</option>
           </select>
-          <button class="btn small" id="themeToggle" title="Toggle theme">🌙</button>
           <button class="btn small" id="refreshBtn">Refresh</button>
-          <button class="btn ghost small" id="exportBtn">Export CSV</button>
-          <button class="btn ghost small" id="verifyBtn">Verify site</button>
         </div>
       </div>
 
       <!-- HOME -->
-      <section id="view-home" class="panel" aria-live="polite">
-        <div style="display:flex;gap:12px;align-items:center">
-          <div style="flex:1">
+      <section id="view-home" class="panel">
+        <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+          <div>
             <h3>Overview</h3>
             <p class="muted">Performance snapshot & wallet balance</p>
           </div>
-          <div style="display:flex;gap:12px;align-items:center">
-            <div style="text-align:right">
-              <div class="muted small">Wallet balance</div>
-              <div class="balance" id="homeBalance">₦0.00</div>
-            </div>
-            <div>
-              <button class="btn" onclick="openReceive()">Receive</button>
-              <button class="btn ghost" onclick="openSend()">Send</button>
-            </div>
+          <div style="text-align:right">
+            <div class="muted small">Wallet balance</div>
+            <div class="balance" id="homeBalance">₦0.00</div>
           </div>
         </div>
 
         <div class="cards" style="margin-top:12px">
-          <div class="card">
+          <div class="card" onclick="selectMetric('clicks')">
+            <canvas id="spark-clicks"></canvas>
             <div class="metric" id="m-clicks">0</div>
             <div class="metric-sub">Clicks <span id="d-clicks" class="delta"></span></div>
           </div>
-          <div class="card">
+          <div class="card" onclick="selectMetric('impressions')">
+            <canvas id="spark-impr"></canvas>
             <div class="metric" id="m-impr">0</div>
             <div class="metric-sub">Impressions <span id="d-impr" class="delta"></span></div>
           </div>
-          <div class="card">
+          <div class="card" onclick="selectMetric('ctr')">
+            <canvas id="spark-ctr"></canvas>
             <div class="metric" id="m-ctr">0%</div>
             <div class="metric-sub">Avg CTR <span id="d-ctr" class="delta"></span></div>
           </div>
-          <div class="card">
+          <div class="card" onclick="selectMetric('position')">
+            <canvas id="spark-pos"></canvas>
             <div class="metric" id="m-pos">0.0</div>
-            <div class="metric-sub">Avg position <span id="d-pos" class="delta"></span></div>
+            <div class="metric-sub">Avg Position <span id="d-pos" class="delta"></span></div>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px">
-          <div class="panel">
-            <h4>Performance (chart)</h4>
-            <div class="chart-wrap">
-              <canvas id="homeChart"></canvas>
-            </div>
+        <div class="panel" style="margin-top:12px">
+          <h4>Performance Chart</h4>
+          <div class="chart-wrap">
+            <canvas id="homeChart"></canvas>
           </div>
-
-          <aside class="panel">
-            <h4>Latest news</h4>
-            <div id="newsList" class="news-list">
-              <!-- clickable Google News link inserted here -->
-              <div class="news-item">
-                <a href="https://news.google.com/home?hl=en-NG&gl=NG&ceid=NG:en" target="_blank" rel="noopener noreferrer">
-                  Open Google News (Nigeria)
-                </a>
-                <div class="muted small">Click to open the official Google News page in a new tab</div>
-              </div>
-            </div>
-            <div style="margin-top:8px">
-              <small class="muted">Tip: You can add a News API key in Settings for additional headlines.</small>
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <!-- DASHBOARD -->
-      <section id="view-dashboard" class="panel hidden">
-        <h3>Search Console — Performance</h3>
-        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
-          <div class="small muted">Metric</div>
-          <select id="metricSelect" class="input-text" style="width:150px">
-            <option value="clicks">Clicks</option>
-            <option value="impressions">Impressions</option>
-            <option value="ctr">CTR</option>
-            <option value="position">Position</option>
-          </select>
-          <div style="margin-left:auto" class="small muted" id="sourceNote">Live (simulated)</div>
-        </div>
-
-        <div class="chart-wrap">
-          <canvas id="dashChart"></canvas>
-        </div>
-
-        <div style="margin-top:14px">
-          <h4>Top queries</h4>
-          <div style="overflow:auto;max-height:180px">
-            <table>
-              <thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead>
-              <tbody id="dashQueries"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- WALLET -->
-      <section id="view-wallet" class="panel hidden">
-        <div class="wallet-header">
-          <div>
-            <div class="muted small">Available balance</div>
-            <div class="balance" id="walletBalance">₦0.00</div>
-          </div>
-          <div>
-            <button class="btn" onclick="openReceive()">Receive</button>
-            <button class="btn ghost" onclick="openSend()">Send</button>
-          </div>
-        </div>
-
-        <div style="margin-top:12px" class="panel">
-          <h4>Transaction History</h4>
-          <div class="tx-list">
-            <table>
-              <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
-              <tbody id="txTbody"></tbody>
-            </table>
-          </div>
-          <div style="margin-top:8px">
-            <button class="btn ghost" id="exportTx">Export transactions</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- SEND -->
-      <section id="view-send" class="panel hidden">
-        <h3>Send funds</h3>
-        <form id="sendForm">
-          <label>Recipient address</label>
-          <input id="sendTo" class="input-text" placeholder="enter address or email"/><br/>
-          <label>Amount</label>
-          <input id="sendAmount" type="number" class="input-text" placeholder="0.00"/><br/>
-          <label>Note (optional)</label>
-          <input id="sendNote" class="input-text" placeholder="Purpose"/><br/>
-          <div style="margin-top:8px">
-            <button type="submit" class="btn">Send</button>
-          </div>
-          <div id="sendMsg" style="color:#c00;margin-top:8px"></div>
-        </form>
-      </section>
-
-      <!-- RECEIVE -->
-      <section id="view-receive" class="panel hidden">
-        <h3>Receive funds</h3>
-        <div>
-          <p class="muted">Your receiving address:</p>
-          <div style="padding:12px;background:#f8fafc;border-radius:8px;word-break:break-all" id="receiveAddress"></div>
-          <div style="margin-top:12px">
-            <button class="btn" id="copyAddr">Copy address</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- SETTINGS -->
-      <section id="view-settingsPanel" class="panel hidden">
-        <h3>Settings</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
-            <label>Display name</label>
-            <input id="profileName" class="input-text" placeholder="Your name"/><br/><br/>
-            <label>Email</label>
-            <input id="profileEmail" class="input-text" placeholder="you@example.com"/><br/><br/>
-            <button class="btn" id="saveProfile">Save profile</button>
-          </div>
-          <div>
-            <label>News API key (optional)</label>
-            <input id="newsKey" class="input-text" placeholder="Paste NewsAPI.org key here"/><br/><br/>
-            <small class="muted">If you add a NewsAPI key, the News widget will fetch headlines (optional).</small>
-            <div style="margin-top:12px">
-              <label>Theme</label>
-              <select id="themeSelect" class="input-text">
-                <option value="auto">Auto (system)</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:12px">
-          <h4>Site verification</h4>
-          <p class="muted">Verify domain to enable real Search Console integration (simulated here).</p>
         </div>
       </section>
     </main>
@@ -333,163 +166,83 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
 </div>
 
 <script>
-// ------------------------- STATE -------------------------
 const state = {
-  view: 'home',
-  theme: 'auto',
   wallet: { balance: 5000000, transactions: [] },
-  homeData: { clicks: [], impressions: [], ctr: [], position: [] },
-  dashData: { queries: [] },
-  receiveAddr: '0xRICHESDEMOADDRESS1234567890'
+  homeData: { clicks: [], impressions: [], ctr: [], position: [] }
 };
 
-// ------------------------- UTIL -------------------------
 const $ = id => document.getElementById(id);
-const formatNaira = n => '₦' + Number(n).toLocaleString();
+const formatNaira = n => '₦'+Number(n).toLocaleString();
+let homeChart=null;
+let sparkCharts={};
 
-// ------------------------- NAV -------------------------
-document.querySelectorAll('.nav button').forEach(btn => btn.addEventListener('click', e=>{
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const view = e.target.dataset.view;
-  switchView(view);
-}));
-
-function switchView(view){
-  state.view = view;
-  $('pageTitle').textContent = view.charAt(0).toUpperCase() + view.slice(1);
-  document.querySelectorAll('section[id^="view-"]').forEach(s=>s.classList.add('hidden'));
-  $('view-'+view).classList.remove('hidden');
-}
-
-// ------------------------- WALLET -------------------------
-function syncWalletUI(){
-  $('walletBalance').textContent = formatNaira(state.wallet.balance);
-  $('homeBalance').textContent = formatNaira(state.wallet.balance);
-  $('receiveAddress').textContent = state.receiveAddr;
-}
-
-function openReceive(){switchView('receive');}
-function openSend(){switchView('send');}
-
-$('sendForm').addEventListener('submit', e=>{
-  e.preventDefault();
-  const to = $('sendTo').value.trim();
-  const amt = parseFloat($('sendAmount').value);
-  const note = $('sendNote').value.trim();
-  if(!to || isNaN(amt) || amt<=0){$('sendMsg').textContent='Invalid recipient or amount';return;}
-  if(amt>state.wallet.balance){$('sendMsg').textContent='Insufficient balance';return;}
-  state.wallet.balance -= amt;
-  state.wallet.transactions.push({date:new Date().toLocaleDateString(), type:'Send', amount:amt, note});
-  syncWalletUI();
-  $('sendMsg').textContent='Transaction successful!';
-  $('sendForm').reset();
-});
-
-// ------------------------- HOME METRICS -------------------------
-let homeChart = null;
-function generatePerformance(days){
+function generatePerformance(days=28){
   const clicks=[],impr=[],ctr=[],pos=[];
   for(let i=0;i<days;i++){
-    const c=Math.floor(Math.random()*1000+500);
-    const i2=Math.floor(Math.random()*10000+5000);
+    const c=Math.floor(Math.random()*1000+100);
+    const i2=Math.floor(Math.random()*5000+1000);
     clicks.push(c);
     impr.push(i2);
     ctr.push(+(c/i2*100).toFixed(2));
     pos.push(+(Math.random()*10+1).toFixed(2));
   }
-  return {clicks,impr,ctr,pos};
+  state.homeData={clicks,impr,ctr,pos};
 }
 
-function renderHomeChart(){
-  const days=parseInt($('range').value,10);
-  const data = generatePerformance(days);
-  state.homeData = data;
+function updateCards(){
+  const metrics=['clicks','impressions','ctr','position'];
+  metrics.forEach(m=>{
+    const arr=state.homeData[m];
+    const last=arr[arr.length-1]||0;
+    const prev=arr[arr.length-2]||0;
+    const delta=last-prev;
+    $(m==='clicks'?'m-clicks':m==='impressions'?'m-impr':m==='ctr'?'m-ctr':'m-pos').textContent=m==='ctr'?last+'%':last;
+    $(m==='clicks'?'d-clicks':m==='impressions'?'d-impr':m==='ctr'?'d-ctr':'d-pos').textContent=(delta>=0?'+':'')+delta.toFixed(m==='ctr'||m==='position'?2:0)+(m==='ctr'?'%':'');
+  });
+}
 
-  // update cards with latest and delta
-  const lastIdx = data.clicks.length-1;
-  const delta = (arr)=>arr[lastIdx]-arr[lastIdx-1]||0;
-  $('m-clicks').textContent = data.clicks[lastIdx].toLocaleString();
-  $('d-clicks').textContent = (delta(data.clicks)>=0?'+':'')+delta(data.clicks).toLocaleString();
-  $('m-impr').textContent = data.impr[lastIdx].toLocaleString();
-  $('d-impr').textContent = (delta(data.impr)>=0?'+':'')+delta(data.impr).toLocaleString();
-  $('m-ctr').textContent = data.ctr[lastIdx]+'%';
-  $('d-ctr').textContent = (delta(data.ctr)>=0?'+':'')+delta(data.ctr).toFixed(2)+'%';
-  $('m-pos').textContent = data.position[lastIdx];
-  $('d-pos').textContent = (delta(data.position)>=0?'+':'')+delta(data.position).toFixed(2);
+function renderSparklines(){
+  const metrics=['clicks','impressions','ctr','position'];
+  metrics.forEach(m=>{
+    const canvas=$(m==='clicks'?'spark-clicks':m==='impressions'?'spark-impr':m==='ctr'?'spark-ctr':'spark-pos');
+    if(sparkCharts[m]) sparkCharts[m].destroy();
+    sparkCharts[m]=new Chart(canvas.getContext('2d'),{
+      type:'line',
+      data:{labels:Array.from({length:state.homeData[m].length},(_,i)=>i+1),datasets:[{data:state.homeData[m],borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,0.1)',tension:0.3,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}
+    });
+  });
+}
 
-  const labels = Array.from({length:days},(_,i)=>`Day ${i+1}`);
-  if(homeChart) homeChart.destroy();
+function renderHomeChart(selectedMetric=null){
+  const metric=selectedMetric||'clicks';
   const ctx=$('homeChart').getContext('2d');
-  homeChart = new Chart(ctx,{
+  if(homeChart) homeChart.destroy();
+  const data=state.homeData[metric];
+  const labels=Array.from({length:data.length},(_,i)=>`Day ${i+1}`);
+  homeChart=new Chart(ctx,{
     type:'line',
-    data:{labels, datasets:[
-      {label:'Clicks',data:data.clicks,borderColor:'#1a73e8',tension:0.3},
-      {label:'Impressions',data:data.impr,borderColor:'#0b5bd7',tension:0.3},
-      {label:'CTR',data:data.ctr,borderColor:'#16a34a',tension:0.3},
-      {label:'Position',data:data.position,borderColor:'#ea4335',tension:0.3}
-    ]},
+    data:{labels,datasets:[{label:metric.charAt(0).toUpperCase()+metric.slice(1),data,borderColor:'#1a73e8',tension:0.3}]},
     options:{responsive:true,plugins:{legend:{position:'top'}}}
   });
 }
 
-// ------------------------- DASHBOARD -------------------------
-let dashChart = null;
-function generateDashboard(){
-  const days=parseInt($('range').value,10);
-  const queries=[];
-  for(let i=0;i<10;i++){
-    queries.push({
-      query:'example query '+(i+1),
-      clicks:Math.floor(Math.random()*1000),
-      impressions:Math.floor(Math.random()*5000),
-      ctr:+(Math.random()*100).toFixed(2)
-    });
-  }
-  state.dashData.queries = queries;
-  renderDashboard();
+function selectMetric(metric){
+  renderHomeChart(metric);
 }
 
-function renderDashboard(){
-  const metric=$('metricSelect').value;
-  const data = state.dashData.queries.map(q=>q[metric==='ctr'? 'ctr':metric==='position'? 'position':'clicks']);
-  const labels = state.dashData.queries.map(q=>q.query);
-  if(dashChart) dashChart.destroy();
-  const ctx = $('dashChart').getContext('2d');
-  dashChart = new Chart(ctx,{
-    type:'bar',
-    data:{labels,datasets:[{label:metric.charAt(0).toUpperCase()+metric.slice(1),data,borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,0.2)'}]},
-    options:{responsive:true,plugins:{legend:{display:false}}}
-  });
-
-  const tbody = $('dashQueries');
-  tbody.innerHTML = '';
-  state.dashData.queries.forEach(q=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${q.query}</td><td>${q.clicks}</td><td>${q.impressions}</td><td>${q.ctr}%</td>`;
-    tbody.appendChild(tr);
-  });
+function refresh(){
+  generatePerformance(parseInt($('range').value,10));
+  updateCards();
+  renderSparklines();
+  renderHomeChart();
+  $('homeBalance').textContent=formatNaira(state.wallet.balance);
 }
 
-// ------------------------- INIT -------------------------
-$('range').addEventListener('change',()=>{
-  renderHomeChart();
-  generateDashboard();
-});
-$('metricSelect').addEventListener('change',renderDashboard);
+$('range').addEventListener('change',refresh);
+$('refreshBtn').addEventListener('click',refresh);
 
-$('refreshBtn').addEventListener('click',()=>{
-  renderHomeChart();
-  generateDashboard();
-});
-
-$('copyAddr').addEventListener('click',()=>navigator.clipboard.writeText(state.receiveAddr).then(()=>alert('Address copied!')));
-
-// init
-syncWalletUI();
-renderHomeChart();
-generateDashboard();
-
+refresh();
 </script>
 </body>
 </html>

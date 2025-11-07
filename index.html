@@ -19,7 +19,7 @@
 html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#eef2ff 0%,var(--bg) 100%);color:#0f1724;-webkit-font-smoothing:antialiased}
 .container{max-width:var(--max-width);margin:0 auto;padding:18px}
 .app{display:flex;gap:18px;min-height:80vh;align-items:flex-start}
-.sidebar{width:260px;background:linear-gradient(180deg,#fff,#fbfdff);border-radius:var(--radius);padding:18px;border:1px solid #e6eef8;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 18px rgba(11,20,45,0.04)}
+.sidebar{width:260px;background:linear-gradient(180deg,#fff,#fbfdff);border-radius:var(--radius);padding:18px;border:1px solid #e6eef8;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 18px rgba(11,20,45,0.04);transition:all 0.3s ease;z-index:100;position:relative;}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--accent)}
 .logo{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-family:var(--mono)}
 .subtitle{font-size:13px;color:var(--muted)}
@@ -40,6 +40,9 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .btn.ghost{background:transparent;border:1px solid rgba(13,110,253,0.12);color:var(--accent)}
 .btn.small{padding:6px 8px;font-size:14px}
 
+/* hamburger */
+#hamburger{display:none;}
+
 /* cards */
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .card{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 6px rgba(12,18,28,0.03)}
@@ -50,7 +53,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 /* content */
 .content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
 .panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
-.panel h3, .panel h4{margin:0 0 12px 0;font-size:16px}
+.panel h3{margin:0 0 12px 0;font-size:16px}
 .muted{color:var(--muted)}
 .small{font-size:13px;color:var(--muted)}
 .chart-wrap{height:320px}
@@ -80,7 +83,8 @@ tbody td{padding:10px 6px;border-bottom:1px solid #f5f8fb}
 
 /* responsive */
 @media (max-width:1000px){
-  .sidebar{display:none}
+  .sidebar{display:none;position:fixed;top:0;left:0;height:100%;background:var(--card);z-index:200;box-shadow:2px 0 12px rgba(0,0,0,0.2);}
+  #hamburger{display:inline-block;}
   .cards{grid-template-columns:repeat(2,1fr)}
   .content{grid-template-columns:1fr;gap:10px}
 }
@@ -127,6 +131,7 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
     <!-- Main -->
     <main class="main" id="mainArea">
       <div class="topbar" role="region" aria-label="Topbar">
+        <button id="hamburger" class="btn small">☰</button>
         <div class="property" aria-hidden="true">
           <div style="display:flex;flex-direction:column">
             <div class="name" id="pageTitle">Home</div>
@@ -197,6 +202,7 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
           <aside class="panel">
             <h4>Latest news</h4>
             <div id="newsList" class="news-list">
+              <!-- clickable Google News link inserted here -->
               <div class="news-item">
                 <a href="https://news.google.com/home?hl=en-NG&gl=NG&ceid=NG:en" target="_blank" rel="noopener noreferrer">
                   Open Google News (Nigeria)
@@ -312,21 +318,9 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
             <input id="newsKey" class="input-text" placeholder="Paste NewsAPI.org key here"/><br/><br/>
             <small class="muted">If you add a NewsAPI key, the News widget will fetch headlines (optional).</small>
             <div style="margin-top:12px">
-              <label>Theme</label>
-              <select id="themeSelect" class="input-text">
-                <option value="auto">Auto (system)</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
+              <button class="btn" id="clearNewsKey">Clear</button>
             </div>
           </div>
-        </div>
-
-        <div style="margin-top:12px">
-          <h4>Site verification</h4>
-          <p class="muted">Toggle verification (client-side simulation)</p>
-          <button class="btn ghost" id="toggleVerify">Verify site</button>
-          <div class="small muted" id="verifyStatus">Status: Verified</div>
         </div>
       </section>
     </main>
@@ -334,110 +328,65 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
 </div>
 
 <script>
-/* --- State --- */
-let wallet = {balance:5000000,tx:[]};
-let receiveAddr = "RD-" + Math.random().toString(36).slice(2,12).toUpperCase();
-document.getElementById("receiveAddress").textContent = receiveAddr;
-document.getElementById("walletBalance").textContent = '₦' + wallet.balance.toLocaleString();
-document.getElementById("homeBalance").textContent = '₦' + wallet.balance.toLocaleString();
+// Theme toggle
+const themeBtn = document.getElementById('themeToggle');
+themeBtn.addEventListener('click',()=>document.body.classList.toggle('dark'));
 
-/* --- Nav & Views --- */
-const navBtns = document.querySelectorAll(".nav button");
-const views = {
-  home: document.getElementById("view-home"),
-  dashboard: document.getElementById("view-dashboard"),
-  wallet: document.getElementById("view-wallet"),
-  send: document.getElementById("view-send"),
-  receive: document.getElementById("view-receive"),
-  settingsPanel: document.getElementById("view-settingsPanel")
-};
+// Hamburger toggle
+const sidebar = document.querySelector('.sidebar');
+const hamburger = document.getElementById('hamburger');
+hamburger.addEventListener('click', ()=>{
+  if(sidebar.style.display==='flex') sidebar.style.display='none';
+  else sidebar.style.display='flex';
+});
 
-navBtns.forEach(btn=>{
-  btn.addEventListener("click",()=>{  
-    navBtns.forEach(b=>b.classList.remove("active")); btn.classList.add("active");
-    document.getElementById("pageTitle").textContent = btn.textContent;
-    Object.values(views).forEach(v=>v.classList.add("hidden"));
-    const key = btn.dataset.view;
-    views[key].classList.remove("hidden");
+// Page navigation
+const navButtons=document.querySelectorAll('.nav button');
+const views=document.querySelectorAll('section[id^="view-"]');
+navButtons.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    navButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const viewId="view-"+btn.dataset.view;
+    views.forEach(v=>v.classList.add('hidden'));
+    const target=document.getElementById(viewId);
+    if(target) target.classList.remove('hidden');
+    document.getElementById('pageTitle').textContent=btn.textContent;
+    if(window.innerWidth<=1000) sidebar.style.display='none';
   });
 });
 
-/* --- Send / Receive --- */
-function openSend(){document.querySelector('[data-view="send"]').click();}
-function openReceive(){document.querySelector('[data-view="receive"]').click();}
+// Wallet demo data
+let walletBalance=5000000;
+const homeBalanceEl=document.getElementById('homeBalance');
+const walletBalanceEl=document.getElementById('walletBalance');
+homeBalanceEl.textContent='₦'+walletBalance.toLocaleString();
+walletBalanceEl.textContent='₦'+walletBalance.toLocaleString();
 
-document.getElementById("sendForm").addEventListener("submit",e=>{
+// Receive address
+document.getElementById('receiveAddress').textContent='0x123456789ABCDEF';
+// Copy address
+document.getElementById('copyAddr').addEventListener('click',()=>{
+  navigator.clipboard.writeText(document.getElementById('receiveAddress').textContent);
+  alert('Address copied!');
+});
+
+// Dummy send form
+document.getElementById('sendForm').addEventListener('submit',e=>{
   e.preventDefault();
-  const amt = parseFloat(document.getElementById("sendAmount").value);
-  const to = document.getElementById("sendTo").value.trim();
-  if(!to || isNaN(amt) || amt<=0){
-    document.getElementById("sendMsg").textContent="Invalid recipient or amount"; return;
-  }
-  if(amt>wallet.balance){document.getElementById("sendMsg").textContent="Insufficient balance"; return;}
-  wallet.balance -= amt;
-  wallet.tx.push({date:new Date().toLocaleString(),type:'Sent',amount:amt,note:document.getElementById("sendNote").value});
-  updateWalletUI();
-  document.getElementById("sendMsg").textContent="Sent successfully!";
-  setTimeout(()=>{document.getElementById("sendMsg").textContent="";},2500);
-  document.getElementById("sendForm").reset();
+  const amt=parseFloat(document.getElementById('sendAmount').value);
+  if(amt>walletBalance){document.getElementById('sendMsg').textContent='Insufficient balance';return;}
+  walletBalance-=amt;
+  homeBalanceEl.textContent='₦'+walletBalance.toLocaleString();
+  walletBalanceEl.textContent='₦'+walletBalance.toLocaleString();
+  document.getElementById('txTbody').innerHTML+=`<tr><td>${new Date().toLocaleDateString()}</td><td>Send</td><td>₦${amt.toLocaleString()}</td><td>${document.getElementById('sendNote').value}</td></tr>`;
+  document.getElementById('sendMsg').textContent='Sent successfully';
+  e.target.reset();
 });
 
-document.getElementById("copyAddr").addEventListener("click",()=>{
-  navigator.clipboard.writeText(receiveAddr);
-  alert("Address copied!");
-});
-
-/* --- Wallet UI --- */
-function updateWalletUI(){
-  document.getElementById("walletBalance").textContent = '₦'+wallet.balance.toLocaleString();
-  document.getElementById("homeBalance").textContent = '₦'+wallet.balance.toLocaleString();
-  const tbody = document.getElementById("txTbody");
-  tbody.innerHTML = '';
-  wallet.tx.slice().reverse().forEach(t=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${t.date}</td><td>${t.type}</td><td>₦${t.amount.toLocaleString()}</td><td>${t.note||''}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-/* --- Charts --- */
-const homeChart = new Chart(document.getElementById("homeChart"),{
-  type:'line', data:{labels:['Day 1','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7'], datasets:[{label:'Clicks',data:[120,150,170,90,200,180,240],borderColor:'#1a73e8',tension:0.3,fill:false} ]}, options:{responsive:true}
-});
-const dashChart = new Chart(document.getElementById("dashChart"),{
-  type:'bar', data:{labels:['Query 1','Query 2','Query 3','Query 4'], datasets:[{label:'Clicks',data:[120,80,50,60],backgroundColor:'#1a73e8'}]}, options:{responsive:true}
-});
-
-/* --- Sample Dashboard Queries --- */
-const dashQueries = document.getElementById("dashQueries");
-[ {q:'Riches App',c:120,i:3500,ctr:'3.4%'},{q:'Nigeria news',c:80,i:2000,ctr:'4%'},{q:'Wallet app',c:50,i:1000,ctr:'5%'},{q:'Crypto balance',c:60,i:1100,ctr:'5.4%'} ].forEach(q=>{
-  const tr = document.createElement("tr");
-  tr.innerHTML=`<td>${q.q}</td><td>${q.c}</td><td>${q.i}</td><td>${q.ctr}</td>`;
-  dashQueries.appendChild(tr);
-});
-
-/* --- Theme --- */
-const themeBtn = document.getElementById("themeToggle");
-themeBtn.addEventListener("click",()=>{
-  document.body.classList.toggle("dark");
-});
-document.getElementById("themeSelect").addEventListener("change",e=>{
-  if(e.target.value==='dark') document.body.classList.add("dark");
-  else if(e.target.value==='light') document.body.classList.remove("dark");
-  else document.body.classList.remove("dark");
-});
-
-/* --- Profile Save --- */
-document.getElementById("saveProfile").addEventListener("click",()=>{
-  alert("Profile saved (simulation)");
-});
-
-/* --- Verification --- */
-let verified = true;
-document.getElementById("toggleVerify").addEventListener("click",()=>{
-  verified = !verified;
-  document.getElementById("verifyStatus").textContent = "Status: "+(verified?"Verified":"Unverified");
-});
+// Sample chart
+const ctx = document.getElementById('homeChart').getContext('2d');
+new Chart(ctx,{type:'line',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Clicks',data:[120,200,150,170,220,180,200],borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,0.1)',tension:0.3}]}});
 </script>
 </body>
 </html>

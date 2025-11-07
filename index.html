@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Console + Wallet — Live Dashboard</title>
+<title>Riches Dashboard — Console & Wallet</title>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -12,16 +12,16 @@
 :root{
   --bg:#f5f7fb; --card:#fff; --muted:#6b7280; --accent:#1a73e8;
   --accent-2:#0b5bd7; --success:#16a34a; --danger:#ea4335; --radius:12px;
-  --glass: rgba(255,255,255,0.7);
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
   --max-width:1200px;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#eef2ff 0%,var(--bg) 100%);color:#0f1724;-webkit-font-smoothing:antialiased}
-.app{display:flex;gap:18px;padding:18px;min-height:100vh;align-items:flex-start;max-width:var(--max-width);margin:0 auto}
+.container{max-width:var(--max-width);margin:0 auto;padding:18px}
+.app{display:flex;gap:18px;min-height:80vh;align-items:flex-start}
 .sidebar{width:260px;background:linear-gradient(180deg,#fff,#fbfdff);border-radius:var(--radius);padding:18px;border:1px solid #e6eef8;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 18px rgba(11,20,45,0.04)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--accent)}
-.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-family:var(--mono)}
+.logo{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-family:var(--mono)}
 .subtitle{font-size:13px;color:var(--muted)}
 .nav{display:flex;flex-direction:column;gap:6px;margin-top:4px}
 .nav button{background:transparent;border:none;text-align:left;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;color:#0f1724}
@@ -30,7 +30,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .sidebar .small{font-size:12px;color:var(--muted)}
 .footer{margin-top:auto;font-size:12px;color:var(--muted)}
 
-/* Main area */
+/* main */
 .main{flex:1;display:flex;flex-direction:column;gap:14px}
 .topbar{display:flex;align-items:center;gap:12px}
 .property{display:flex;align-items:center;gap:12px;background:var(--card);padding:10px 12px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 3px rgba(12,18,28,0.03)}
@@ -47,7 +47,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .metric-sub{font-size:13px;color:var(--muted);margin-top:6px}
 .delta{font-size:13px;margin-left:8px}
 
-/* content area */
+/* content */
 .content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
 .panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
 .panel h3{margin:0 0 12px 0;font-size:16px}
@@ -66,7 +66,7 @@ tbody td{padding:10px 6px;border-bottom:1px solid #f5f8fb}
 .balance{font-size:28px;font-weight:800}
 .tx-list{max-height:260px;overflow:auto}
 
-/* forms & modals */
+/* modals */
 .modal-backdrop{position:fixed;inset:0;background:rgba(11,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:60}
 .modal{background:var(--card);padding:18px;border-radius:12px;max-width:520px;width:92%;box-shadow:0 10px 40px rgba(11,20,45,0.12)}
 .row{display:flex;gap:8px;margin-top:8px}
@@ -74,9 +74,9 @@ tbody td{padding:10px 6px;border-bottom:1px solid #f5f8fb}
 .input-text{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eef8}
 
 /* news */
-.news-list{max-height:220px;overflow:auto}
+.news-list{max-height:260px;overflow:auto}
 .news-item{padding:8px;border-bottom:1px solid #f4f7fb}
-.news-item h4{margin:0;font-size:15px}
+.news-item a{color:var(--accent);text-decoration:none;font-weight:700}
 
 /* responsive */
 @media (max-width:1000px){
@@ -94,242 +94,248 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
 </style>
 </head>
 <body>
-
-<div class="app" role="application" aria-label="Console wallet app">
-  <!-- Sidebar -->
-  <aside class="sidebar" aria-label="Main navigation">
-    <div class="brand" aria-hidden="true">
-      <div class="logo">SC</div>
-      <div>
-        <div>Console Wallet</div>
-        <div class="subtitle">Performance & Finance</div>
-      </div>
-    </div>
-
-    <nav class="nav" role="navigation" aria-label="Primary">
-      <button class="active" data-view="home">Home</button>
-      <button data-view="dashboard">Dashboard</button>
-      <button data-view="wallet">Wallet</button>
-      <button data-view="send">Send</button>
-      <button data-view="receive">Receive</button>
-      <button data-view="settings" class="small">Settings</button>
-    </nav>
-
-    <div class="small">Property</div>
-    <div class="property" style="padding:10px">
-      <div style="font-weight:700" id="siteName">example.com</div>
-      <div class="muted" style="font-size:13px" id="siteStatus">Verified</div>
-    </div>
-
-    <div class="footer">© Console Wallet — client-only demo</div>
-  </aside>
-
-  <!-- Main -->
-  <main class="main" id="mainArea">
-    <!-- TOPBAR -->
-    <div class="topbar" role="region" aria-label="Topbar">
-      <div class="property" aria-hidden="true">
-        <div style="display:flex;flex-direction:column">
-          <div class="name" id="pageTitle">Home</div>
-          <div class="muted small">Overview & news</div>
+<div class="container">
+  <div class="app" role="application" aria-label="Riches Dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand" aria-hidden="true">
+        <div class="logo">RD</div>
+        <div>
+          <div>Riches Dashboard</div>
+          <div class="subtitle">Performance & Wallet</div>
         </div>
       </div>
 
-      <div class="controls" role="toolbar" aria-label="Controls">
-        <select id="range" class="input-text" style="width:170px">
-          <option value="7">Last 7 days</option>
-          <option value="28" selected>Last 28 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="365">Last 12 months</option>
-        </select>
-        <button class="btn small" id="themeToggle" title="Toggle theme">🌙</button>
-        <button class="btn small" id="refreshBtn">Refresh</button>
-        <button class="btn ghost small" id="exportBtn">Export CSV</button>
-        <button class="btn ghost small" id="verifyBtn">Verify site</button>
-      </div>
-    </div>
+      <nav class="nav" role="navigation" aria-label="Primary">
+        <button class="active" data-view="home">Home</button>
+        <button data-view="dashboard">Performance</button>
+        <button data-view="wallet">Wallet</button>
+        <button data-view="send">Send</button>
+        <button data-view="receive">Receive</button>
+        <button data-view="settings" class="small">Settings</button>
+      </nav>
 
-    <!-- HOME VIEW -->
-    <section id="view-home" class="panel" aria-live="polite">
-      <div style="display:flex;gap:12px;align-items:center">
-        <div style="flex:1">
-          <h3>Overview</h3>
-          <p class="muted">Performance snapshot & wallet balance</p>
+      <div class="small">Property</div>
+      <div class="property" style="padding:10px">
+        <div style="font-weight:700" id="siteName">example.com</div>
+        <div class="muted" style="font-size:13px" id="siteStatus">Verified</div>
+      </div>
+
+      <div class="footer">© Riches Dashboard — demo app</div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main" id="mainArea">
+      <div class="topbar" role="region" aria-label="Topbar">
+        <div class="property" aria-hidden="true">
+          <div style="display:flex;flex-direction:column">
+            <div class="name" id="pageTitle">Home</div>
+            <div class="muted small">Overview & news</div>
+          </div>
         </div>
+
+        <div class="controls" role="toolbar" aria-label="Controls">
+          <select id="range" class="input-text" style="width:170px">
+            <option value="7">Last 7 days</option>
+            <option value="28" selected>Last 28 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last 12 months</option>
+          </select>
+          <button class="btn small" id="themeToggle" title="Toggle theme">🌙</button>
+          <button class="btn small" id="refreshBtn">Refresh</button>
+          <button class="btn ghost small" id="exportBtn">Export CSV</button>
+          <button class="btn ghost small" id="verifyBtn">Verify site</button>
+        </div>
+      </div>
+
+      <!-- HOME -->
+      <section id="view-home" class="panel" aria-live="polite">
         <div style="display:flex;gap:12px;align-items:center">
-          <div style="text-align:right">
-            <div class="muted small">Wallet balance</div>
-            <div class="balance" id="homeBalance">₦0.00</div>
+          <div style="flex:1">
+            <h3>Overview</h3>
+            <p class="muted">Performance snapshot & wallet balance</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="text-align:right">
+              <div class="muted small">Wallet balance</div>
+              <div class="balance" id="homeBalance">₦0.00</div>
+            </div>
+            <div>
+              <button class="btn" onclick="openReceive()">Receive</button>
+              <button class="btn ghost" onclick="openSend()">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards" style="margin-top:12px">
+          <div class="card">
+            <div class="metric" id="m-clicks">0</div>
+            <div class="metric-sub">Clicks <span id="d-clicks" class="delta"></span></div>
+          </div>
+          <div class="card">
+            <div class="metric" id="m-impr">0</div>
+            <div class="metric-sub">Impressions <span id="d-impr" class="delta"></span></div>
+          </div>
+          <div class="card">
+            <div class="metric" id="m-ctr">0%</div>
+            <div class="metric-sub">Avg CTR <span id="d-ctr" class="delta"></span></div>
+          </div>
+          <div class="card">
+            <div class="metric" id="m-pos">0.0</div>
+            <div class="metric-sub">Avg position <span id="d-pos" class="delta"></span></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px">
+          <div class="panel">
+            <h4>Performance (chart)</h4>
+            <div class="chart-wrap">
+              <canvas id="homeChart"></canvas>
+            </div>
+          </div>
+
+          <aside class="panel">
+            <h4>Latest news</h4>
+            <div id="newsList" class="news-list">
+              <!-- clickable Google News link inserted here -->
+              <div class="news-item">
+                <a href="https://news.google.com/home?hl=en-NG&gl=NG&ceid=NG:en" target="_blank" rel="noopener noreferrer">
+                  Open Google News (Nigeria)
+                </a>
+                <div class="muted small">Click to open the official Google News page in a new tab</div>
+              </div>
+            </div>
+            <div style="margin-top:8px">
+              <small class="muted">Tip: You can add a News API key in Settings for additional headlines.</small>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="panel hidden">
+        <h3>Search Console — Performance</h3>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+          <div class="small muted">Metric</div>
+          <select id="metricSelect" class="input-text" style="width:150px">
+            <option value="clicks">Clicks</option>
+            <option value="impressions">Impressions</option>
+            <option value="ctr">CTR</option>
+            <option value="position">Position</option>
+          </select>
+          <div style="margin-left:auto" class="small muted" id="sourceNote">Live (simulated)</div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="dashChart"></canvas>
+        </div>
+
+        <div style="margin-top:14px">
+          <h4>Top queries</h4>
+          <div style="overflow:auto;max-height:180px">
+            <table>
+              <thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead>
+              <tbody id="dashQueries"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- WALLET -->
+      <section id="view-wallet" class="panel hidden">
+        <div class="wallet-header">
+          <div>
+            <div class="muted small">Available balance</div>
+            <div class="balance" id="walletBalance">₦0.00</div>
           </div>
           <div>
             <button class="btn" onclick="openReceive()">Receive</button>
             <button class="btn ghost" onclick="openSend()">Send</button>
           </div>
         </div>
-      </div>
 
-      <div class="cards" style="margin-top:12px">
-        <div class="card">
-          <div class="metric" id="m-clicks">0</div>
-          <div class="metric-sub">Clicks <span id="d-clicks" class="delta"></span></div>
-        </div>
-        <div class="card">
-          <div class="metric" id="m-impr">0</div>
-          <div class="metric-sub">Impressions <span id="d-impr" class="delta"></span></div>
-        </div>
-        <div class="card">
-          <div class="metric" id="m-ctr">0%</div>
-          <div class="metric-sub">Avg CTR <span id="d-ctr" class="delta"></span></div>
-        </div>
-        <div class="card">
-          <div class="metric" id="m-pos">0.0</div>
-          <div class="metric-sub">Avg position <span id="d-pos" class="delta"></span></div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px">
-        <div class="panel">
-          <h4>Performance (chart)</h4>
-          <div class="chart-wrap">
-            <canvas id="homeChart"></canvas>
-          </div>
-        </div>
-
-        <aside class="panel">
-          <h4>Latest news</h4>
-          <div id="newsList" class="news-list">
-            <!-- news items inserted here -->
+        <div style="margin-top:12px" class="panel">
+          <h4>Transaction History</h4>
+          <div class="tx-list">
+            <table>
+              <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
+              <tbody id="txTbody"></tbody>
+            </table>
           </div>
           <div style="margin-top:8px">
-            <small class="muted">Tip: Add a NewsAPI key in Settings for live headlines</small>
+            <button class="btn ghost" id="exportTx">Export transactions</button>
           </div>
-        </aside>
-      </div>
-    </section>
-
-    <!-- DASHBOARD VIEW -->
-    <section id="view-dashboard" class="panel hidden">
-      <h3>Search Console — Performance</h3>
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
-        <div class="small muted">Metric</div>
-        <select id="metricSelect" class="input-text" style="width:150px">
-          <option value="clicks">Clicks</option>
-          <option value="impressions">Impressions</option>
-          <option value="ctr">CTR</option>
-          <option value="position">Position</option>
-        </select>
-        <div style="margin-left:auto" class="small muted" id="sourceNote">Live (simulated)</div>
-      </div>
-
-      <div class="chart-wrap">
-        <canvas id="dashChart"></canvas>
-      </div>
-
-      <div style="margin-top:14px">
-        <h4>Top queries</h4>
-        <div style="overflow:auto;max-height:180px">
-          <table>
-            <thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead>
-            <tbody id="dashQueries"></tbody>
-          </table>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- WALLET VIEW -->
-    <section id="view-wallet" class="panel hidden">
-      <div class="wallet-header">
+      <!-- SEND -->
+      <section id="view-send" class="panel hidden">
+        <h3>Send funds</h3>
+        <form id="sendForm">
+          <label>Recipient address</label>
+          <input id="sendTo" class="input-text" placeholder="enter address or email"/><br/>
+          <label>Amount</label>
+          <input id="sendAmount" type="number" class="input-text" placeholder="0.00"/><br/>
+          <label>Note (optional)</label>
+          <input id="sendNote" class="input-text" placeholder="Purpose"/><br/>
+          <div style="margin-top:8px">
+            <button type="submit" class="btn">Send</button>
+          </div>
+          <div id="sendMsg" style="color:#c00;margin-top:8px"></div>
+        </form>
+      </section>
+
+      <!-- RECEIVE -->
+      <section id="view-receive" class="panel hidden">
+        <h3>Receive funds</h3>
         <div>
-          <div class="muted small">Available balance</div>
-          <div class="balance" id="walletBalance">₦0.00</div>
-        </div>
-        <div>
-          <button class="btn" onclick="openReceive()">Receive</button>
-          <button class="btn ghost" onclick="openSend()">Send</button>
-        </div>
-      </div>
-
-      <div style="margin-top:12px" class="panel">
-        <h4>Transaction History</h4>
-        <div class="tx-list">
-          <table>
-            <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
-            <tbody id="txTbody"></tbody>
-          </table>
-        </div>
-        <div style="margin-top:8px">
-          <button class="btn ghost" id="exportTx">Export transactions</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- SEND VIEW (alternative) -->
-    <section id="view-send" class="panel hidden">
-      <h3>Send funds</h3>
-      <form id="sendForm">
-        <label>Recipient address</label>
-        <input id="sendTo" class="input-text" placeholder="enter address or email"/><br/>
-        <label>Amount</label>
-        <input id="sendAmount" type="number" class="input-text" placeholder="0.00"/><br/>
-        <label>Note (optional)</label>
-        <input id="sendNote" class="input-text" placeholder="Purpose"/><br/>
-        <div style="margin-top:8px">
-          <button type="submit" class="btn">Send</button>
-        </div>
-        <div id="sendMsg" style="color:#c00;margin-top:8px"></div>
-      </form>
-    </section>
-
-    <!-- RECEIVE VIEW (alternative) -->
-    <section id="view-receive" class="panel hidden">
-      <h3>Receive funds</h3>
-      <div>
-        <p class="muted">Your receiving address:</p>
-        <div style="padding:12px;background:#f8fafc;border-radius:8px;word-break:break-all" id="receiveAddress"></div>
-        <div style="margin-top:12px">
-          <button class="btn" id="copyAddr">Copy address</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- SETTINGS VIEW -->
-    <section id="view-settingsPanel" class="panel hidden">
-      <h3>Settings</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label>Display name</label>
-          <input id="profileName" class="input-text" placeholder="Your name"/><br/><br/>
-          <label>Email</label>
-          <input id="profileEmail" class="input-text" placeholder="you@example.com"/><br/><br/>
-          <button class="btn" id="saveProfile">Save profile</button>
-        </div>
-        <div>
-          <label>News API key (optional)</label>
-          <input id="newsKey" class="input-text" placeholder="Paste NewsAPI.org key here"/><br/><br/>
-          <small class="muted">If you add a NewsAPI key, the News widget will fetch live headlines.</small>
+          <p class="muted">Your receiving address:</p>
+          <div style="padding:12px;background:#f8fafc;border-radius:8px;word-break:break-all" id="receiveAddress"></div>
           <div style="margin-top:12px">
-            <label>Theme</label>
-            <select id="themeSelect" class="input-text">
-              <option value="auto">Auto (system)</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
+            <button class="btn" id="copyAddr">Copy address</button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div style="margin-top:12px">
-        <h4>Site verification</h4>
-        <p class="muted">Toggle verification (client-side simulation)</p>
-        <button class="btn ghost" id="toggleVerify">Toggle verify</button>
-        <div id="verifyMsg" class="muted" style="margin-top:8px"></div>
-      </div>
-    </section>
+      <!-- SETTINGS -->
+      <section id="view-settingsPanel" class="panel hidden">
+        <h3>Settings</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label>Display name</label>
+            <input id="profileName" class="input-text" placeholder="Your name"/><br/><br/>
+            <label>Email</label>
+            <input id="profileEmail" class="input-text" placeholder="you@example.com"/><br/><br/>
+            <button class="btn" id="saveProfile">Save profile</button>
+          </div>
+          <div>
+            <label>News API key (optional)</label>
+            <input id="newsKey" class="input-text" placeholder="Paste NewsAPI.org key here"/><br/><br/>
+            <small class="muted">If you add a NewsAPI key, the News widget will fetch headlines (optional).</small>
+            <div style="margin-top:12px">
+              <label>Theme</label>
+              <select id="themeSelect" class="input-text">
+                <option value="auto">Auto (system)</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
-  </main>
+        <div style="margin-top:12px">
+          <h4>Site verification</h4>
+          <p class="muted">Toggle verification (client-side simulation)</p>
+          <button class="btn ghost" id="toggleVerify">Toggle verify</button>
+          <div id="verifyMsg" class="muted" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
 </div>
 
-<!-- Send modal (also used by "Send" view) -->
+<!-- Send modal -->
 <div class="modal-backdrop" id="sendModal" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true">
     <div style="display:flex;align-items:center;gap:12px">
@@ -372,21 +378,18 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
 
 <script>
 /* -----------------------
-   Client-side Application
-   Single-file full UI
+   Single-file Riches Dashboard
    ----------------------- */
 
-/* Utilities */
 function $(id){ return document.getElementById(id); }
 function fmtN(n){ return '₦' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 
-/* App state stored in localStorage */
-const STORAGE_KEY = 'console_wallet_state_v1';
+const STORAGE_KEY = 'riches_dashboard_state_v1';
 let state = {
-  profile: { name: 'Admin', email: 'admin@example.com' },
-  wallet: { balance: 5000.00, address: 'rcv-abc-123-xyz' },
-  tx: [], // transactions
+  profile: { name: 'Riches User', email: 'user@example.com' },
+  wallet: { balance: 5000000.00, address: 'rcv-RICHES-0001' }, // 5,000,000 naira initial
+  tx: [],
   verified: true,
   newsKey: null,
   theme: 'auto'
@@ -395,20 +398,23 @@ let state = {
 function loadState(){
   try{
     const s = localStorage.getItem(STORAGE_KEY);
-    if(s) state = JSON.parse(s);
+    if(s) {
+      const parsed = JSON.parse(s);
+      // keep wallet.balance default if missing to ensure 5M on first-run
+      state = Object.assign(state, parsed);
+      if(typeof state.wallet?.balance !== 'number') state.wallet.balance = 5000000;
+    }
   }catch(e){ console.warn('load state failed', e); }
 }
-function saveState(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
-/* Initialize */
+/* Init */
 loadState();
 syncProfileUI();
 syncWalletUI();
 applyTheme(state.theme);
 
-/* Navigation */
+/* Navigation wiring */
 document.querySelectorAll('.nav button').forEach(btn=>{
   btn.addEventListener('click', (ev)=>{
     const view = btn.getAttribute('data-view');
@@ -421,47 +427,39 @@ function activateNavButton(btn){
   btn.classList.add('active');
 }
 
-/* Show/hide views */
+/* Show/Hide views */
 function hideAllViews(){
-  ['view-home','view-dashboard','view-wallet','view-send','view-receive','view-settingsPanel','view-coverage'].forEach(id=>{
-    const el = $(id);
-    if(el) el.classList.add('hidden');
+  ['view-home','view-dashboard','view-wallet','view-send','view-receive','view-settingsPanel'].forEach(id=>{
+    const el = $(id); if(el) el.classList.add('hidden');
   });
 }
 function showView(name){
-  // update page title
   $('pageTitle').textContent = (name==='home')? 'Home' : name.charAt(0).toUpperCase() + name.slice(1);
-  // hide views then show target
   hideAllViews();
-  if(name==='home'){ $('view-home').classList.remove('hidden'); }
+  if(name==='home') $('view-home').classList.remove('hidden');
   if(name==='dashboard'){ $('view-dashboard').classList.remove('hidden'); renderDashboard(); }
   if(name==='wallet'){ $('view-wallet').classList.remove('hidden'); renderTxList(); }
   if(name==='send'){ $('view-send').classList.remove('hidden'); }
   if(name==='receive'){ $('view-receive').classList.remove('hidden'); $('receiveAddress').textContent = state.wallet.address; }
   if(name==='settings'){ $('view-settingsPanel').classList.remove('hidden'); populateSettings(); }
-  if(name==='coverage'){ $('view-coverage').classList.remove('hidden'); }
-  // set an accessible focus
-  setTimeout(()=> document.title = 'Console • ' + $('pageTitle').textContent, 50);
+  document.title = 'Riches Dashboard • ' + $('pageTitle').textContent;
 }
 
 /* Start at Home */
 showView('home');
 
-/* Topbar controls */
+/* Controls */
 $('themeToggle').addEventListener('click', ()=>{
-  const newTheme = (document.body.classList.contains('dark')) ? 'light' : 'dark';
+  const newTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
   setTheme(newTheme);
 });
 $('refreshBtn').addEventListener('click', ()=> { refreshAll(); });
 $('verifyBtn').addEventListener('click', ()=> { toggleVerify(); });
-
-/* Export CSV */
 $('exportBtn').addEventListener('click', exportSnapshot);
 
-/* Send/Receive helpers and modals */
+/* Send / Receive modal handling */
 function openSend(){
   showView('send');
-  // also open modal for quick send
   $('modalTo').value=''; $('modalAmount').value=''; $('modalNote').value='';
   $('sendModal').style.display='flex'; $('sendModal').setAttribute('aria-hidden','false');
 }
@@ -471,7 +469,7 @@ function openReceive(){
 }
 function closeModal(id){ $(id).style.display='none'; $(id).setAttribute('aria-hidden','true'); }
 
-/* Modal send form */
+/* Modal submit: send */
 $('modalSendForm').addEventListener('submit', (e)=>{
   e.preventDefault();
   const to = $('modalTo').value.trim();
@@ -479,7 +477,6 @@ $('modalSendForm').addEventListener('submit', (e)=>{
   const note = $('modalNote').value.trim();
   if(!to || isNaN(amount) || amount <= 0){ $('modalSendMsg').textContent='Enter valid recipient and amount'; return; }
   if(amount > state.wallet.balance){ $('modalSendMsg').textContent='Insufficient funds'; return; }
-  // process send
   state.wallet.balance -= amount;
   const tx = { id: 'tx'+Date.now(), date: new Date().toISOString(), type:'Sent', amount, note, to };
   state.tx.unshift(tx);
@@ -488,13 +485,11 @@ $('modalSendForm').addEventListener('submit', (e)=>{
   setTimeout(()=> closeModal('sendModal'), 900);
 });
 
-/* Receive modal copy */
-$('modalCopyAddr').addEventListener('click', ()=>{
-  navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Address copied'));
-});
+/* Copy address */
+$('modalCopyAddr').addEventListener('click', ()=> navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Address copied')));
 $('copyAddr').addEventListener('click', ()=> navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Copied')));
 
-/* Inline send view submit */
+/* Inline send form */
 $('sendForm').addEventListener('submit', (e)=>{
   e.preventDefault();
   const to = $('sendTo').value.trim();
@@ -509,8 +504,8 @@ $('sendForm').addEventListener('submit', (e)=>{
   setTimeout(()=> { $('sendMsg').textContent=''; showView('wallet'); }, 700);
 });
 
-/* Receive quick (simulate incoming) — create a receive action in settings or testing */
-function simulateReceive(amount=randInt(50,1000), note='Deposit'){
+/* Simulate receive (for testing) */
+function simulateReceive(amount=randInt(1000,50000), note='Deposit'){
   state.wallet.balance += amount;
   const tx = { id:'tx'+Date.now(), date:new Date().toISOString(), type:'Received', amount, note, from:'external' };
   state.tx.unshift(tx);
@@ -518,7 +513,7 @@ function simulateReceive(amount=randInt(50,1000), note='Deposit'){
   alert('Received ' + fmtN(amount));
 }
 
-/* Sync wallet UI */
+/* Wallet UI sync */
 function syncWalletUI(){
   $('homeBalance').textContent = fmtN(state.wallet.balance);
   $('walletBalance').textContent = fmtN(state.wallet.balance);
@@ -526,41 +521,32 @@ function syncWalletUI(){
   saveState();
 }
 
-/* Render transaction list */
+/* Transactions render */
 function renderTxList(){
   const tbody = $('txTbody');
   tbody.innerHTML = '';
-  if(state.tx.length===0){
-    tbody.innerHTML = '<tr><td colspan="4" class="muted">No transactions yet</td></tr>';
-    return;
+  if(!state.tx || state.tx.length===0){
+    tbody.innerHTML = '<tr><td colspan="4" class="muted">No transactions yet</td></tr>'; return;
   }
   state.tx.forEach(t=>{
     const d = new Date(t.date).toLocaleString();
-    tbody.insertAdjacentHTML('beforeend', `<tr>
-      <td>${d}</td>
-      <td>${t.type}</td>
-      <td>${fmtN(t.amount)}</td>
-      <td>${t.note || t.to || t.from || ''}</td>
-    </tr>`);
+    tbody.insertAdjacentHTML('beforeend', `<tr><td>${d}</td><td>${t.type}</td><td>${fmtN(t.amount)}</td><td>${t.note || t.to || t.from || ''}</td></tr>`);
   });
 }
-
-/* Export transactions as CSV */
 $('exportTx')?.addEventListener('click', ()=>{
-  const rows = [['Date','Type','Amount','Note']];
+  const rows=[['Date','Type','Amount','Note']];
   state.tx.forEach(t=> rows.push([new Date(t.date).toISOString(), t.type, t.amount, t.note||'']));
-  const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'transactions.csv'; document.body.appendChild(a); a.click(); a.remove();
+  const csv = rows.map(r=> r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 });
 
-/* Dashboard / Performance: uses Chart.js */
+/* Performance generation + charts */
 let homeChart=null, dashChart=null;
 function generatePerformance(days=28){
-  const labels=[]; const clicks=[]; const impressions=[]; const ctr=[]; const pos=[];
+  const labels=[], clicks=[], impressions=[], ctr=[], pos=[];
   for(let i=days-1;i>=0;i--){
-    const d = new Date(); d.setDate(d.getDate()-i);
+    const d=new Date(); d.setDate(d.getDate()-i);
     labels.push(d.toISOString().slice(0,10));
     const impr = randInt(400,3500);
     const clk = Math.max(0, Math.floor(impr*(0.01 + Math.random()*0.07)));
@@ -570,8 +556,6 @@ function generatePerformance(days=28){
   }
   return {labels, clicks, impressions, ctr, pos};
 }
-
-/* Render home chart */
 function renderHomeChart(){
   const data = generatePerformance(parseInt($('range').value,10));
   $('m-clicks').textContent = data.clicks.reduce((a,b)=>a+b,0).toLocaleString();
@@ -586,12 +570,7 @@ function renderHomeChart(){
     data:{ labels:data.labels, datasets:[{ label:'Clicks', data:data.clicks, borderColor:'#1a73e8', backgroundColor:'rgba(26,115,232,0.06)', fill:true, tension:0.25 }]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
   });
-
-  // update small news + top queries
-  populateTopQueries();
 }
-
-/* Dashboard view render */
 function renderDashboard(){
   const metric = $('metricSelect').value;
   const days = parseInt($('range').value,10);
@@ -605,7 +584,6 @@ function renderDashboard(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
   });
 
-  // populate queries table
   const qbody = $('dashQueries'); qbody.innerHTML='';
   const sampleQs = ['example query','how to setup','best tools','learn seo','dashboard tutorial','site verification','performance tips','analytics guide'];
   sampleQs.forEach(q=>{
@@ -614,59 +592,32 @@ function renderDashboard(){
   });
 }
 
-/* Top queries for home */
-function populateTopQueries(){
-  // internal random list used for both home and dash
+/* News widget: clickable Google News link already present; optionally show simulated headlines below the link */
+function fetchNews(){
+  const newsList = $('newsList');
+  // ensure Google News link remains at top (already added in HTML). Append simulated headlines afterward
+  const sims = [
+    {t:'Search Console tips for 2025', s:'Console News'},
+    {t:'New SEO patterns emerging', s:'SEO Daily'},
+    {t:'How to verify your site quickly', s:'Webmaster Blog'}
+  ];
+  sims.forEach(s=>{
+    const el = document.createElement('div'); el.className='news-item';
+    el.innerHTML = `<div style="font-weight:700">${s.t}</div><div class="muted small">${s.s}</div>`;
+    newsList.appendChild(el);
+  });
 }
 
-/* Refresh everything */
+/* Refresh routine */
 function refreshAll(){
   renderHomeChart();
   if(!homeChart) renderHomeChart();
-  if(document.querySelector('#view-dashboard') && !$('view-dashboard').classList.contains('hidden')) renderDashboard();
+  if(!$('view-dashboard').classList.contains('hidden')) renderDashboard();
   fetchNews();
   syncWalletUI();
 }
 
-/* News widget: uses NewsAPI if key provided in settings; else simulate */
-async function fetchNews(){
-  const newsList = $('newsList'); newsList.innerHTML = '';
-  const key = state.newsKey || localStorage.getItem('news_api_key');
-  if(key){
-    // attempt to fetch headlines from NewsAPI.org (user must supply key in settings)
-    try{
-      const res = await fetch(`https://newsapi.org/v2/top-headlines?language=en&pageSize=6`, { headers: { 'X-Api-Key': key }});
-      if(res.ok){
-        const j = await res.json();
-        if(j.articles && j.articles.length){
-          j.articles.forEach(a=>{
-            newsList.insertAdjacentHTML('beforeend', `<div class="news-item"><h4>${a.title}</h4><div class="muted small">${a.source.name} • ${new Date(a.publishedAt).toLocaleString()}</div><p>${a.description || ''}</p></div>`);
-          });
-          return;
-        }
-      } else {
-        // show fallback message
-        newsList.insertAdjacentHTML('beforeend', `<div class="news-item muted">Unable to fetch news (check API key). Showing latest simulated headlines below.</div>`);
-      }
-    }catch(err){
-      newsList.insertAdjacentHTML('beforeend', `<div class="news-item muted">News fetch failed: ${err.message}</div>`);
-    }
-  }
-  // Simulated headlines fallback
-  const sims = [
-    {t:'Search Console tips for 2025', s:'Console News'},
-    {t:'New SEO patterns emerging', s:'SEO Daily'},
-    {t:'How to verify your site quickly', s:'Webmaster Blog'},
-    {t:'Performance metrics you should monitor', s:'Analytics Today'},
-    {t:'Protecting your account: 5 tips', s:'Security Weekly'},
-    {t:'Understanding impressions vs clicks', s:'Search Insights'}
-  ];
-  sims.forEach(s=>{
-    newsList.insertAdjacentHTML('beforeend', `<div class="news-item"><h4>${s.t}</h4><div class="muted small">${s.s}</div></div>`);
-  });
-}
-
-/* Settings: save profile, newsKey, theme */
+/* Settings */
 $('saveProfile')?.addEventListener('click', ()=>{
   state.profile.name = $('profileName').value || state.profile.name;
   state.profile.email = $('profileEmail').value || state.profile.email;
@@ -675,9 +626,7 @@ $('saveProfile')?.addEventListener('click', ()=>{
   state.theme = $('themeSelect').value||state.theme;
   saveState(); syncProfileUI(); alert('Settings saved');
 });
-
 $('toggleVerify')?.addEventListener('click', ()=> toggleVerify());
-
 function populateSettings(){
   $('profileName').value = state.profile.name || '';
   $('profileEmail').value = state.profile.email || '';
@@ -694,16 +643,15 @@ function toggleVerify(){
   saveState();
 }
 
-/* Profile sync */
+/* Profile UI */
 function syncProfileUI(){
   $('siteName').textContent = state.profile.name ? state.profile.name.toLowerCase().replace(/\s+/g,'') + '.example' : 'example.com';
-  $('pageTitle').textContent = 'Home';
-  $('homeBalance').textContent = fmtN(state.wallet.balance);
   $('profileName') && ($('profileName').value = state.profile.name);
   $('profileEmail') && ($('profileEmail').value = state.profile.email);
+  $('homeBalance').textContent = fmtN(state.wallet.balance);
 }
 
-/* Settings population on load */
+/* Settings population on start */
 function populateSettingsOnStart(){
   $('profileName') && ($('profileName').value = state.profile.name);
   $('profileEmail') && ($('profileEmail').value = state.profile.email);
@@ -726,55 +674,27 @@ function setTheme(t){
 function applyTheme(t){
   if(t==='dark') document.body.classList.add('dark');
   else if(t==='light') document.body.classList.remove('dark');
-  else { /* auto */ }
+  else { const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches; document.body.classList.toggle('dark', prefersDark); }
 }
 applyTheme(state.theme);
 
-/* Periodic refresh */
-setInterval(()=> {
-  // refresh news and snapshot metric deltas
-  fetchNews();
-}, 1000 * 60 * 5); // every 5 minutes
-
-/* Export snapshot as CSV for performance metrics (simple) */
-function exportSnapshot(){
-  const days = parseInt($('range').value,10) || 28;
-  const perf = generatePerformance(days);
-  const rows = [['date','clicks','impressions','ctr','position']];
-  for(let i=0;i<perf.labels.length;i++){
-    rows.push([perf.labels[i], perf.clicks[i], perf.impressions[i], perf.ctr[i], perf.pos[i]]);
-  }
-  const csv = rows.map(r=> r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download = 'performance.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-/* Quick demo: add a receive button that simulates incoming funds */
-(function addQuickReceiveButton(){
-  const b = document.createElement('button'); b.className='btn ghost small'; b.textContent='Simulate Receive';
-  b.style.marginLeft='8px';
-  b.onclick = ()=> { simulateReceive(randInt(100,800),'Simulated deposit'); };
-  document.querySelector('.controls').appendChild(b);
-})();
-
-/* Wire metric selection change in dashboard */
-$('metricSelect').addEventListener('change', ()=> { renderDashboard(); });
-
-/* On load actions */
-refreshAll();
-
-/* Accessibility: keyboard shortcuts */
+/* Keyboard shortcuts */
 window.addEventListener('keydown',(e)=>{
-  if(e.key === '1') { document.querySelector('.nav button[data-view="home"]').click(); }
-  if(e.key === '2') { document.querySelector('.nav button[data-view="dashboard"]').click(); }
-  if(e.key === '3') { document.querySelector('.nav button[data-view="wallet"]').click(); }
+  if(e.key === '1') document.querySelector('.nav button[data-view="home"]').click();
+  if(e.key === '2') document.querySelector('.nav button[data-view="dashboard"]').click();
+  if(e.key === '3') document.querySelector('.nav button[data-view="wallet"]').click();
 });
 
-/* Expose some functions for console debugging (optional) */
-window.__APP = { state, refreshAll, simulateReceive, exportSnapshot, saveState };
+/* Initial actions */
+refreshAll();
+renderTxList();
+syncWalletUI();
 
-/* Final save on page unload */
+/* Save before unload */
 window.addEventListener('beforeunload', ()=> saveState());
+
+/* Expose some helpers for debugging */
+window.__RICHES = { state, refreshAll, simulateReceive, saveState };
 
 </script>
 </body>

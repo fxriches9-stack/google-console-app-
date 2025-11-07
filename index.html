@@ -1,110 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Google Console App</title>
-  <style>
-    body {
-      background-color: #f1f3f4;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-
-    #app {
-      width: 600px;
-      max-width: 95%;
-      background: white;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    #console {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      height: 400px;
-      font-family: monospace;
-      background-color: #202124;
-      color: #e8eaed;
-    }
-
-    #input {
-      border: none;
-      padding: 10px;
-      font-size: 16px;
-      width: 100%;
-      box-sizing: border-box;
-      border-top: 1px solid #ccc;
-      outline: none;
-    }
-
-    .command {
-      color: #8ab4f8;
-    }
-
-    .response {
-      color: #34a853;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-<div id="app">
-  <div id="console"></div>
-  <input id="input" type="text" placeholder="Type a command and hit Enter...">
-</div>
-
-<script>
-  const consoleDiv = document.getElementById('console');
-  const input = document.getElementById('input');
-
-  function log(message, type='log') {
-    const p = document.createElement('p');
-    p.textContent = message;
-    if(type === 'command') p.className = 'command';
-    if(type === 'response') p.className = 'response';
-    consoleDiv.appendChild(p);
-    consoleDiv.scrollTop = consoleDiv.scrollHeight;
-  }
-
-  function handleCommand(cmd) {
-    log('> ' + cmd, 'command');
-
-    switch(cmd.toLowerCase()) {
-      case 'hello':
-        log('Hello! This is your Google Console App.', 'response');
-        break;
-      case 'date':
-        log(new Date().toString(), 'response');
-        break;
-      case 'help':
-        log('Available commands: hello, date, help, clear', 'response');
-        break;
-      case 'clear':
-        consoleDiv.innerHTML = '';
-        break;
-      default:
-        log('Unknown command. Type "help" for a list.', 'response');
-    }
-  }
-
-  input.addEventListener('keydown', function(e) {
-    if(e.key === 'Enter' && input.value.trim() !== '') {
-      handleCommand(input.value.trim());
-      input.value = '';
-    }
-  });
-
-  log('Google Console App initialized. Type "help" for commands.', 'response');
-</script>
-
+  <div id="console">
+    <div id="output">Google Console App initialized. Type "help" for commands.</div>
+    <div id="input-line">
+      <span>&gt;</span>
+      <input type="text" id="input" autofocus />
+    </div>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>

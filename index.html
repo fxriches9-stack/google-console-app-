@@ -1,208 +1,781 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Google Console App Clone</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Console + Wallet — Live Dashboard</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <style>
 :root{
-  --bg:#f5f7fb; --card:#fff; --muted:#6b7280; --accent:#1a73e8; --accent-2:#0b5bd7;
-  --success:#34a853; --danger:#ea4335; --radius:12px;
+  --bg:#f5f7fb; --card:#fff; --muted:#6b7280; --accent:#1a73e8;
+  --accent-2:#0b5bd7; --success:#16a34a; --danger:#ea4335; --radius:12px;
+  --glass: rgba(255,255,255,0.7);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+  --max-width:1200px;
 }
-*{box-sizing:border-box}body{
-  margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:#0f1724;
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#eef2ff 0%,var(--bg) 100%);color:#0f1724;-webkit-font-smoothing:antialiased}
+.app{display:flex;gap:18px;padding:18px;min-height:100vh;align-items:flex-start;max-width:var(--max-width);margin:0 auto}
+.sidebar{width:260px;background:linear-gradient(180deg,#fff,#fbfdff);border-radius:var(--radius);padding:18px;border:1px solid #e6eef8;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 18px rgba(11,20,45,0.04)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--accent)}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-family:var(--mono)}
+.subtitle{font-size:13px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.nav button{background:transparent;border:none;text-align:left;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;color:#0f1724}
+.nav button.small{font-weight:600;color:var(--muted);font-size:13px}
+.nav button.active{background:linear-gradient(90deg, rgba(26,115,232,0.08), rgba(26,115,232,0.02));color:var(--accent)}
+.sidebar .small{font-size:12px;color:var(--muted)}
+.footer{margin-top:auto;font-size:12px;color:var(--muted)}
+
+/* Main area */
+.main{flex:1;display:flex;flex-direction:column;gap:14px}
+.topbar{display:flex;align-items:center;gap:12px}
+.property{display:flex;align-items:center;gap:12px;background:var(--card);padding:10px 12px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 3px rgba(12,18,28,0.03)}
+.property .name{font-weight:800}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+.btn.ghost{background:transparent;border:1px solid rgba(13,110,253,0.12);color:var(--accent)}
+.btn.small{padding:6px 8px;font-size:14px}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff;box-shadow:0 1px 6px rgba(12,18,28,0.03)}
+.metric{font-size:20px;font-weight:800}
+.metric-sub{font-size:13px;color:var(--muted);margin-top:6px}
+.delta{font-size:13px;margin-left:8px}
+
+/* content area */
+.content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
+.panel h3{margin:0 0 12px 0;font-size:16px}
+.muted{color:var(--muted)}
+.small{font-size:13px;color:var(--muted)}
+.chart-wrap{height:320px}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{font-weight:700;text-align:left;color:var(--muted);padding:8px 6px;border-bottom:1px dashed #eef2ff}
+tbody td{padding:10px 6px;border-bottom:1px solid #f5f8fb}
+.badge{display:inline-block;background:#f3f9f5;color:var(--success);padding:6px 8px;border-radius:999px;font-weight:700;font-size:13px}
+
+/* wallet */
+.wallet-header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.balance{font-size:28px;font-weight:800}
+.tx-list{max-height:260px;overflow:auto}
+
+/* forms & modals */
+.modal-backdrop{position:fixed;inset:0;background:rgba(11,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:60}
+.modal{background:var(--card);padding:18px;border-radius:12px;max-width:520px;width:92%;box-shadow:0 10px 40px rgba(11,20,45,0.12)}
+.row{display:flex;gap:8px;margin-top:8px}
+.close-x{margin-left:auto;border:none;background:transparent;font-size:18px;cursor:pointer}
+.input-text{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eef8}
+
+/* news */
+.news-list{max-height:220px;overflow:auto}
+.news-item{padding:8px;border-bottom:1px solid #f4f7fb}
+.news-item h4{margin:0;font-size:15px}
+
+/* responsive */
+@media (max-width:1000px){
+  .sidebar{display:none}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .content{grid-template-columns:1fr;gap:10px}
 }
-.hidden{display:none;}
-header,footer{text-align:center;padding:24px;}
-.btn{background:var(--accent);color:#fff;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
-.btn.ghost{background:transparent;border:1px solid rgba(11,93,230,0.2);color:var(--accent)}
-input,select{padding:10px;border-radius:8px;border:1px solid #d0d7e3}
-.hero{padding:50px 20px;background:#fff;border-bottom:1px solid #e8f0ff;}
-.hero h1{margin:0 0 10px;}
-.hero p{color:var(--muted);}
-.section{max-width:900px;margin:30px auto;padding:0 20px;}
-.card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-.flex{display:flex;gap:16px;flex-wrap:wrap;}
-/* Dashboard */
-.app{display:flex;min-height:100vh;}
-.sidebar{width:240px;background:#fff;padding:20px;border-right:1px solid #e0e4f2;}
-.sidebar button{display:block;width:100%;margin-bottom:8px;padding:10px;border:none;background:#f1f5fb;border-radius:8px;cursor:pointer;font-weight:600;}
-.sidebar button.active{background:var(--accent);color:#fff;}
-.main{flex:1;padding:20px;}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px;}
-.metric{font-size:22px;font-weight:700;}
-.metric-sub{color:var(--muted);font-size:14px;}
-.panel{background:#fff;padding:16px;border-radius:var(--radius);margin-bottom:16px;}
-table{width:100%;border-collapse:collapse;font-size:14px;}
-th,td{padding:6px;border-bottom:1px solid #eee;text-align:left;}
-.badge{background:#e3fcef;color:#05620e;padding:3px 8px;border-radius:6px;font-size:12px;}
-footer{margin-top:30px;color:#999;font-size:13px;}
-/* Dark mode */
-body.dark{background:#0f172a;color:#e2e8f0;}
-body.dark .sidebar,body.dark .panel,body.dark .card{background:#1e293b;color:#e2e8f0;}
-body.dark .sidebar button{background:#1e293b;color:#e2e8f0;border:1px solid #334155;}
-body.dark .sidebar button.active{background:var(--accent);}
+
+/* dark mode */
+body.dark{background:#0b1220;color:#e6eef8}
+body.dark .card, body.dark .panel, body.dark .property, body.dark .sidebar, body.dark .modal{background:#0f1724;color:#e6eef8;border-color:#162032}
+body.dark .muted{color:#93a4b9}
+body.dark .nav button{color:#dbeafe}
+body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent)}
 </style>
 </head>
 <body>
 
-<!-- HOMEPAGE -->
-<div id="home">
-  <header class="hero">
-    <h1>Google Console App</h1>
-    <p>Monitor your site performance, impressions, clicks and coverage — simplified clone version.</p>
-    <button class="btn" onclick="showSection('login')">Sign In</button>
-    <button class="btn ghost" onclick="showSection('dashboard')">Open Dashboard</button>
-  </header>
-  <div class="section">
-    <h2>Features</h2>
-    <ul>
-      <li>Dashboard with charts and top queries</li>
-      <li>Login and settings pages</li>
-      <li>Dark mode toggle</li>
-    </ul>
-  </div>
-  <footer>Not affiliated with Google • Educational clone interface</footer>
+<div class="app" role="application" aria-label="Console wallet app">
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Main navigation">
+    <div class="brand" aria-hidden="true">
+      <div class="logo">SC</div>
+      <div>
+        <div>Console Wallet</div>
+        <div class="subtitle">Performance & Finance</div>
+      </div>
+    </div>
+
+    <nav class="nav" role="navigation" aria-label="Primary">
+      <button class="active" data-view="home">Home</button>
+      <button data-view="dashboard">Dashboard</button>
+      <button data-view="wallet">Wallet</button>
+      <button data-view="send">Send</button>
+      <button data-view="receive">Receive</button>
+      <button data-view="settings" class="small">Settings</button>
+    </nav>
+
+    <div class="small">Property</div>
+    <div class="property" style="padding:10px">
+      <div style="font-weight:700" id="siteName">example.com</div>
+      <div class="muted" style="font-size:13px" id="siteStatus">Verified</div>
+    </div>
+
+    <div class="footer">© Console Wallet — client-only demo</div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="mainArea">
+    <!-- TOPBAR -->
+    <div class="topbar" role="region" aria-label="Topbar">
+      <div class="property" aria-hidden="true">
+        <div style="display:flex;flex-direction:column">
+          <div class="name" id="pageTitle">Home</div>
+          <div class="muted small">Overview & news</div>
+        </div>
+      </div>
+
+      <div class="controls" role="toolbar" aria-label="Controls">
+        <select id="range" class="input-text" style="width:170px">
+          <option value="7">Last 7 days</option>
+          <option value="28" selected>Last 28 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+        </select>
+        <button class="btn small" id="themeToggle" title="Toggle theme">🌙</button>
+        <button class="btn small" id="refreshBtn">Refresh</button>
+        <button class="btn ghost small" id="exportBtn">Export CSV</button>
+        <button class="btn ghost small" id="verifyBtn">Verify site</button>
+      </div>
+    </div>
+
+    <!-- HOME VIEW -->
+    <section id="view-home" class="panel" aria-live="polite">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div style="flex:1">
+          <h3>Overview</h3>
+          <p class="muted">Performance snapshot & wallet balance</p>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="text-align:right">
+            <div class="muted small">Wallet balance</div>
+            <div class="balance" id="homeBalance">₦0.00</div>
+          </div>
+          <div>
+            <button class="btn" onclick="openReceive()">Receive</button>
+            <button class="btn ghost" onclick="openSend()">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards" style="margin-top:12px">
+        <div class="card">
+          <div class="metric" id="m-clicks">0</div>
+          <div class="metric-sub">Clicks <span id="d-clicks" class="delta"></span></div>
+        </div>
+        <div class="card">
+          <div class="metric" id="m-impr">0</div>
+          <div class="metric-sub">Impressions <span id="d-impr" class="delta"></span></div>
+        </div>
+        <div class="card">
+          <div class="metric" id="m-ctr">0%</div>
+          <div class="metric-sub">Avg CTR <span id="d-ctr" class="delta"></span></div>
+        </div>
+        <div class="card">
+          <div class="metric" id="m-pos">0.0</div>
+          <div class="metric-sub">Avg position <span id="d-pos" class="delta"></span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px">
+        <div class="panel">
+          <h4>Performance (chart)</h4>
+          <div class="chart-wrap">
+            <canvas id="homeChart"></canvas>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <h4>Latest news</h4>
+          <div id="newsList" class="news-list">
+            <!-- news items inserted here -->
+          </div>
+          <div style="margin-top:8px">
+            <small class="muted">Tip: Add a NewsAPI key in Settings for live headlines</small>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="view-dashboard" class="panel hidden">
+      <h3>Search Console — Performance</h3>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+        <div class="small muted">Metric</div>
+        <select id="metricSelect" class="input-text" style="width:150px">
+          <option value="clicks">Clicks</option>
+          <option value="impressions">Impressions</option>
+          <option value="ctr">CTR</option>
+          <option value="position">Position</option>
+        </select>
+        <div style="margin-left:auto" class="small muted" id="sourceNote">Live (simulated)</div>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="dashChart"></canvas>
+      </div>
+
+      <div style="margin-top:14px">
+        <h4>Top queries</h4>
+        <div style="overflow:auto;max-height:180px">
+          <table>
+            <thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead>
+            <tbody id="dashQueries"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- WALLET VIEW -->
+    <section id="view-wallet" class="panel hidden">
+      <div class="wallet-header">
+        <div>
+          <div class="muted small">Available balance</div>
+          <div class="balance" id="walletBalance">₦0.00</div>
+        </div>
+        <div>
+          <button class="btn" onclick="openReceive()">Receive</button>
+          <button class="btn ghost" onclick="openSend()">Send</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="panel">
+        <h4>Transaction History</h4>
+        <div class="tx-list">
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
+            <tbody id="txTbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px">
+          <button class="btn ghost" id="exportTx">Export transactions</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEND VIEW (alternative) -->
+    <section id="view-send" class="panel hidden">
+      <h3>Send funds</h3>
+      <form id="sendForm">
+        <label>Recipient address</label>
+        <input id="sendTo" class="input-text" placeholder="enter address or email"/><br/>
+        <label>Amount</label>
+        <input id="sendAmount" type="number" class="input-text" placeholder="0.00"/><br/>
+        <label>Note (optional)</label>
+        <input id="sendNote" class="input-text" placeholder="Purpose"/><br/>
+        <div style="margin-top:8px">
+          <button type="submit" class="btn">Send</button>
+        </div>
+        <div id="sendMsg" style="color:#c00;margin-top:8px"></div>
+      </form>
+    </section>
+
+    <!-- RECEIVE VIEW (alternative) -->
+    <section id="view-receive" class="panel hidden">
+      <h3>Receive funds</h3>
+      <div>
+        <p class="muted">Your receiving address:</p>
+        <div style="padding:12px;background:#f8fafc;border-radius:8px;word-break:break-all" id="receiveAddress"></div>
+        <div style="margin-top:12px">
+          <button class="btn" id="copyAddr">Copy address</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS VIEW -->
+    <section id="view-settingsPanel" class="panel hidden">
+      <h3>Settings</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label>Display name</label>
+          <input id="profileName" class="input-text" placeholder="Your name"/><br/><br/>
+          <label>Email</label>
+          <input id="profileEmail" class="input-text" placeholder="you@example.com"/><br/><br/>
+          <button class="btn" id="saveProfile">Save profile</button>
+        </div>
+        <div>
+          <label>News API key (optional)</label>
+          <input id="newsKey" class="input-text" placeholder="Paste NewsAPI.org key here"/><br/><br/>
+          <small class="muted">If you add a NewsAPI key, the News widget will fetch live headlines.</small>
+          <div style="margin-top:12px">
+            <label>Theme</label>
+            <select id="themeSelect" class="input-text">
+              <option value="auto">Auto (system)</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <h4>Site verification</h4>
+        <p class="muted">Toggle verification (client-side simulation)</p>
+        <button class="btn ghost" id="toggleVerify">Toggle verify</button>
+        <div id="verifyMsg" class="muted" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+  </main>
 </div>
 
-<!-- LOGIN -->
-<div id="login" class="hidden">
-  <div class="section card" style="max-width:400px;margin-top:80px;">
-    <h2>Sign In</h2>
-    <p class="muted">Demo credentials: <b>admin@example.com / admin123</b></p>
-    <input id="email" placeholder="Email" style="width:100%;margin-top:10px"><br>
-    <input id="password" type="password" placeholder="Password" style="width:100%;margin-top:10px"><br>
-    <button class="btn" style="margin-top:14px;width:100%" onclick="login()">Login</button>
-    <button class="btn ghost" style="margin-top:8px;width:100%" onclick="showSection('home')">Back</button>
-    <div id="login-error" style="color:#c00;font-size:13px;margin-top:6px;"></div>
+<!-- Send modal (also used by "Send" view) -->
+<div class="modal-backdrop" id="sendModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div style="display:flex;align-items:center;gap:12px">
+      <h4 style="margin:0">Send funds</h4>
+      <button class="close-x" onclick="closeModal('sendModal')">✕</button>
+    </div>
+    <form id="modalSendForm" style="margin-top:10px">
+      <label>Recipient</label>
+      <input id="modalTo" class="input-text" placeholder="Address or email"/><br/>
+      <label>Amount</label>
+      <input id="modalAmount" type="number" class="input-text" placeholder="0.00"/><br/>
+      <label>Note</label>
+      <input id="modalNote" class="input-text" placeholder="Optional"/><br/>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn" type="submit">Confirm send</button>
+        <button class="btn ghost" type="button" onclick="closeModal('sendModal')">Cancel</button>
+      </div>
+      <div id="modalSendMsg" style="color:#c00;margin-top:8px"></div>
+    </form>
   </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="hidden">
-  <div class="app">
-    <aside class="sidebar">
-      <button class="active" onclick="setView('overview')">Overview</button>
-      <button onclick="setView('performance')">Performance</button>
-      <button onclick="setView('coverage')">Coverage</button>
-      <button onclick="setView('settings')">Settings</button>
-      <hr>
-      <button class="btn small ghost" onclick="toggleTheme()">Toggle Dark</button>
-      <button class="btn ghost small" style="margin-top:8px" onclick="showSection('home')">Logout</button>
-    </aside>
-
-    <main class="main">
-      <div class="topbar">
-        <h2 id="view-title">Overview</h2>
-        <button class="btn small" onclick="refreshData()">Refresh Data</button>
+<!-- Receive modal -->
+<div class="modal-backdrop" id="receiveModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div style="display:flex;align-items:center;gap:12px">
+      <h4 style="margin:0">Receive funds</h4>
+      <button class="close-x" onclick="closeModal('receiveModal')">✕</button>
+    </div>
+    <div style="margin-top:10px">
+      <p class="muted">Share this address to receive funds:</p>
+      <div style="padding:12px;background:#f8fafc;border-radius:8px;word-break:break-all" id="modalReceiveAddr"></div>
+      <div style="margin-top:10px">
+        <button class="btn" id="modalCopyAddr">Copy</button>
+        <button class="btn ghost" onclick="closeModal('receiveModal')">Close</button>
       </div>
-
-      <div id="view-overview">
-        <div class="cards">
-          <div class="card"><div class="metric" id="clicks">0</div><div class="metric-sub">Clicks</div></div>
-          <div class="card"><div class="metric" id="impr">0</div><div class="metric-sub">Impressions</div></div>
-          <div class="card"><div class="metric" id="ctr">0%</div><div class="metric-sub">CTR</div></div>
-          <div class="card"><div class="metric" id="pos">0.0</div><div class="metric-sub">Position</div></div>
-        </div>
-        <div class="panel">
-          <h3>Performance Chart</h3>
-          <canvas id="chart" height="200"></canvas>
-        </div>
-        <div class="panel">
-          <h3>Top Queries</h3>
-          <table><thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th></tr></thead>
-            <tbody id="queries"></tbody></table>
-        </div>
-      </div>
-
-      <div id="view-coverage" class="hidden">
-        <div class="panel"><h3>Coverage Report</h3>
-        <p>All pages valid — 0 errors found.</p>
-        <div class="badge">Valid</div></div>
-      </div>
-
-      <div id="view-settings" class="hidden">
-        <div class="panel">
-          <h3>Account Settings</h3>
-          <p id="account-info"></p>
-          <button class="btn" onclick="logout()">Logout</button>
-        </div>
-      </div>
-    </main>
+    </div>
   </div>
 </div>
 
 <script>
-let user=null,chart=null,data=null;
-function showSection(id){
-  document.querySelectorAll('body > div').forEach(d=>d.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
+/* -----------------------
+   Client-side Application
+   Single-file full UI
+   ----------------------- */
+
+/* Utilities */
+function $(id){ return document.getElementById(id); }
+function fmtN(n){ return '₦' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+/* App state stored in localStorage */
+const STORAGE_KEY = 'console_wallet_state_v1';
+let state = {
+  profile: { name: 'Admin', email: 'admin@example.com' },
+  wallet: { balance: 5000.00, address: 'rcv-abc-123-xyz' },
+  tx: [], // transactions
+  verified: true,
+  newsKey: null,
+  theme: 'auto'
+};
+
+function loadState(){
+  try{
+    const s = localStorage.getItem(STORAGE_KEY);
+    if(s) state = JSON.parse(s);
+  }catch(e){ console.warn('load state failed', e); }
 }
-function login(){
-  const email=document.getElementById('email').value.trim();
-  const pass=document.getElementById('password').value.trim();
-  if(email==="admin@example.com"&&pass==="admin123"){
-    user={email:email,name:"Admin"};
-    document.getElementById('login-error').textContent='';
-    showSection('dashboard');
-    document.getElementById('account-info').textContent=user.email;
-    refreshData();
-  } else {
-    document.getElementById('login-error').textContent='Invalid credentials.';
-  }
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
-function logout(){user=null;showSection('home');}
-function toggleTheme(){
-  document.body.classList.toggle('dark');
+
+/* Initialize */
+loadState();
+syncProfileUI();
+syncWalletUI();
+applyTheme(state.theme);
+
+/* Navigation */
+document.querySelectorAll('.nav button').forEach(btn=>{
+  btn.addEventListener('click', (ev)=>{
+    const view = btn.getAttribute('data-view');
+    activateNavButton(btn);
+    showView(view);
+  });
+});
+function activateNavButton(btn){
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
 }
-function setView(v){
-  document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
-  document.getElementById(`view-${v}`).classList.remove('hidden');
-  document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('view-title').textContent=v.charAt(0).toUpperCase()+v.slice(1);
-}
-function randomData(){
-  const days=28;
-  const labels=[],clicks=[],impr=[],ctr=[],pos=[];
-  for(let i=days-1;i>=0;i--){
-    const d=new Date();d.setDate(d.getDate()-i);
-    const date=d.toISOString().slice(5,10);
-    const im=Math.floor(Math.random()*4000)+200;
-    const cl=Math.floor(im*(0.02+Math.random()*0.05));
-    const c=(cl/im*100).toFixed(2);
-    const p=(1+Math.random()*25).toFixed(1);
-    labels.push(date);clicks.push(cl);impr.push(im);ctr.push(+c);pos.push(+p);
-  }
-  return {labels,clicks,impr,ctr,pos};
-}
-function refreshData(){
-  data=randomData();
-  document.getElementById('clicks').textContent=data.clicks.reduce((a,b)=>a+b,0);
-  document.getElementById('impr').textContent=data.impr.reduce((a,b)=>a+b,0);
-  document.getElementById('ctr').textContent=(data.ctr.reduce((a,b)=>a+b,0)/data.ctr.length).toFixed(2)+'%';
-  document.getElementById('pos').textContent=(data.pos.reduce((a,b)=>a+b,0)/data.pos.length).toFixed(1);
-  updateChart();
-  const qbody=document.getElementById('queries');qbody.innerHTML='';
-  const queries=["seo tips","example","website traffic","search data","analytics","keywords","console app"];
-  queries.forEach(q=>{
-    const cl=Math.floor(Math.random()*500)+50;
-    const im=Math.floor(cl*(10+Math.random()*40));
-    const c=((cl/im)*100).toFixed(1);
-    qbody.innerHTML+=`<tr><td>${q}</td><td>${cl}</td><td>${im}</td><td>${c}%</td></tr>`;
+
+/* Show/hide views */
+function hideAllViews(){
+  ['view-home','view-dashboard','view-wallet','view-send','view-receive','view-settingsPanel','view-coverage'].forEach(id=>{
+    const el = $(id);
+    if(el) el.classList.add('hidden');
   });
 }
-function updateChart(){
-  const ctx=document.getElementById('chart');
-  if(chart)chart.destroy();
-  chart=new Chart(ctx,{type:'line',
-    data:{labels:data.labels,datasets:[{label:'Clicks',data:data.clicks,borderColor:'#1a73e8',fill:false,tension:0.2}]},
-    options:{responsive:true,plugins:{legend:{display:false}}}});
+function showView(name){
+  // update page title
+  $('pageTitle').textContent = (name==='home')? 'Home' : name.charAt(0).toUpperCase() + name.slice(1);
+  // hide views then show target
+  hideAllViews();
+  if(name==='home'){ $('view-home').classList.remove('hidden'); }
+  if(name==='dashboard'){ $('view-dashboard').classList.remove('hidden'); renderDashboard(); }
+  if(name==='wallet'){ $('view-wallet').classList.remove('hidden'); renderTxList(); }
+  if(name==='send'){ $('view-send').classList.remove('hidden'); }
+  if(name==='receive'){ $('view-receive').classList.remove('hidden'); $('receiveAddress').textContent = state.wallet.address; }
+  if(name==='settings'){ $('view-settingsPanel').classList.remove('hidden'); populateSettings(); }
+  if(name==='coverage'){ $('view-coverage').classList.remove('hidden'); }
+  // set an accessible focus
+  setTimeout(()=> document.title = 'Console • ' + $('pageTitle').textContent, 50);
 }
-showSection('home');
+
+/* Start at Home */
+showView('home');
+
+/* Topbar controls */
+$('themeToggle').addEventListener('click', ()=>{
+  const newTheme = (document.body.classList.contains('dark')) ? 'light' : 'dark';
+  setTheme(newTheme);
+});
+$('refreshBtn').addEventListener('click', ()=> { refreshAll(); });
+$('verifyBtn').addEventListener('click', ()=> { toggleVerify(); });
+
+/* Export CSV */
+$('exportBtn').addEventListener('click', exportSnapshot);
+
+/* Send/Receive helpers and modals */
+function openSend(){
+  showView('send');
+  // also open modal for quick send
+  $('modalTo').value=''; $('modalAmount').value=''; $('modalNote').value='';
+  $('sendModal').style.display='flex'; $('sendModal').setAttribute('aria-hidden','false');
+}
+function openReceive(){
+  $('modalReceiveAddr').textContent = state.wallet.address;
+  $('receiveModal').style.display='flex'; $('receiveModal').setAttribute('aria-hidden','false');
+}
+function closeModal(id){ $(id).style.display='none'; $(id).setAttribute('aria-hidden','true'); }
+
+/* Modal send form */
+$('modalSendForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const to = $('modalTo').value.trim();
+  const amount = parseFloat($('modalAmount').value);
+  const note = $('modalNote').value.trim();
+  if(!to || isNaN(amount) || amount <= 0){ $('modalSendMsg').textContent='Enter valid recipient and amount'; return; }
+  if(amount > state.wallet.balance){ $('modalSendMsg').textContent='Insufficient funds'; return; }
+  // process send
+  state.wallet.balance -= amount;
+  const tx = { id: 'tx'+Date.now(), date: new Date().toISOString(), type:'Sent', amount, note, to };
+  state.tx.unshift(tx);
+  saveState(); syncWalletUI(); renderTxList();
+  $('modalSendMsg').textContent='Sent ✓';
+  setTimeout(()=> closeModal('sendModal'), 900);
+});
+
+/* Receive modal copy */
+$('modalCopyAddr').addEventListener('click', ()=>{
+  navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Address copied'));
+});
+$('copyAddr').addEventListener('click', ()=> navigator.clipboard?.writeText(state.wallet.address).then(()=> alert('Copied')));
+
+/* Inline send view submit */
+$('sendForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const to = $('sendTo').value.trim();
+  const amount = parseFloat($('sendAmount').value);
+  const note = $('sendNote').value.trim();
+  if(!to || isNaN(amount) || amount <= 0){ $('sendMsg').textContent='Enter valid recipient and amount'; return; }
+  if(amount > state.wallet.balance){ $('sendMsg').textContent='Insufficient funds'; return; }
+  state.wallet.balance -= amount;
+  const tx = { id:'tx'+Date.now(), date: new Date().toISOString(), type:'Sent', amount, note, to };
+  state.tx.unshift(tx);
+  saveState(); syncWalletUI(); renderTxList(); $('sendMsg').textContent='Sent ✓';
+  setTimeout(()=> { $('sendMsg').textContent=''; showView('wallet'); }, 700);
+});
+
+/* Receive quick (simulate incoming) — create a receive action in settings or testing */
+function simulateReceive(amount=randInt(50,1000), note='Deposit'){
+  state.wallet.balance += amount;
+  const tx = { id:'tx'+Date.now(), date:new Date().toISOString(), type:'Received', amount, note, from:'external' };
+  state.tx.unshift(tx);
+  saveState(); syncWalletUI(); renderTxList();
+  alert('Received ' + fmtN(amount));
+}
+
+/* Sync wallet UI */
+function syncWalletUI(){
+  $('homeBalance').textContent = fmtN(state.wallet.balance);
+  $('walletBalance').textContent = fmtN(state.wallet.balance);
+  $('receiveAddress').textContent = state.wallet.address;
+  saveState();
+}
+
+/* Render transaction list */
+function renderTxList(){
+  const tbody = $('txTbody');
+  tbody.innerHTML = '';
+  if(state.tx.length===0){
+    tbody.innerHTML = '<tr><td colspan="4" class="muted">No transactions yet</td></tr>';
+    return;
+  }
+  state.tx.forEach(t=>{
+    const d = new Date(t.date).toLocaleString();
+    tbody.insertAdjacentHTML('beforeend', `<tr>
+      <td>${d}</td>
+      <td>${t.type}</td>
+      <td>${fmtN(t.amount)}</td>
+      <td>${t.note || t.to || t.from || ''}</td>
+    </tr>`);
+  });
+}
+
+/* Export transactions as CSV */
+$('exportTx')?.addEventListener('click', ()=>{
+  const rows = [['Date','Type','Amount','Note']];
+  state.tx.forEach(t=> rows.push([new Date(t.date).toISOString(), t.type, t.amount, t.note||'']));
+  const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'transactions.csv'; document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* Dashboard / Performance: uses Chart.js */
+let homeChart=null, dashChart=null;
+function generatePerformance(days=28){
+  const labels=[]; const clicks=[]; const impressions=[]; const ctr=[]; const pos=[];
+  for(let i=days-1;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    labels.push(d.toISOString().slice(0,10));
+    const impr = randInt(400,3500);
+    const clk = Math.max(0, Math.floor(impr*(0.01 + Math.random()*0.07)));
+    clicks.push(clk); impressions.push(impr);
+    ctr.push(Number(((clk/impr)*100).toFixed(2)));
+    pos.push(Number((1 + Math.random()*30).toFixed(2)));
+  }
+  return {labels, clicks, impressions, ctr, pos};
+}
+
+/* Render home chart */
+function renderHomeChart(){
+  const data = generatePerformance(parseInt($('range').value,10));
+  $('m-clicks').textContent = data.clicks.reduce((a,b)=>a+b,0).toLocaleString();
+  $('m-impr').textContent = data.impressions.reduce((a,b)=>a+b,0).toLocaleString();
+  $('m-ctr').textContent = (data.ctr.reduce((a,b)=>a+b,0)/data.ctr.length).toFixed(1) + '%';
+  $('m-pos').textContent = (data.pos.reduce((a,b)=>a+b,0)/data.pos.length).toFixed(2);
+
+  const ctx = $('homeChart').getContext('2d');
+  if(homeChart) homeChart.destroy();
+  homeChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:data.labels, datasets:[{ label:'Clicks', data:data.clicks, borderColor:'#1a73e8', backgroundColor:'rgba(26,115,232,0.06)', fill:true, tension:0.25 }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+
+  // update small news + top queries
+  populateTopQueries();
+}
+
+/* Dashboard view render */
+function renderDashboard(){
+  const metric = $('metricSelect').value;
+  const days = parseInt($('range').value,10);
+  const data = generatePerformance(days);
+  const dataset = (metric==='clicks') ? data.clicks : (metric==='impressions' ? data.impressions : (metric==='ctr' ? data.ctr : data.pos));
+  const ctx = $('dashChart').getContext('2d');
+  if(dashChart) dashChart.destroy();
+  dashChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:data.labels, datasets:[{ label:metric, data:dataset, borderColor:'#0b74ff', backgroundColor:'rgba(11,116,255,0.06)', fill:true, tension:0.2 }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+
+  // populate queries table
+  const qbody = $('dashQueries'); qbody.innerHTML='';
+  const sampleQs = ['example query','how to setup','best tools','learn seo','dashboard tutorial','site verification','performance tips','analytics guide'];
+  sampleQs.forEach(q=>{
+    const clicks = randInt(10,900); const impr = clicks * randInt(10,80);
+    qbody.insertAdjacentHTML('beforeend', `<tr><td>${q}</td><td>${clicks.toLocaleString()}</td><td>${impr.toLocaleString()}</td><td>${((clicks/impr)*100).toFixed(1)}%</td></tr>`);
+  });
+}
+
+/* Top queries for home */
+function populateTopQueries(){
+  // internal random list used for both home and dash
+}
+
+/* Refresh everything */
+function refreshAll(){
+  renderHomeChart();
+  if(!homeChart) renderHomeChart();
+  if(document.querySelector('#view-dashboard') && !$('view-dashboard').classList.contains('hidden')) renderDashboard();
+  fetchNews();
+  syncWalletUI();
+}
+
+/* News widget: uses NewsAPI if key provided in settings; else simulate */
+async function fetchNews(){
+  const newsList = $('newsList'); newsList.innerHTML = '';
+  const key = state.newsKey || localStorage.getItem('news_api_key');
+  if(key){
+    // attempt to fetch headlines from NewsAPI.org (user must supply key in settings)
+    try{
+      const res = await fetch(`https://newsapi.org/v2/top-headlines?language=en&pageSize=6`, { headers: { 'X-Api-Key': key }});
+      if(res.ok){
+        const j = await res.json();
+        if(j.articles && j.articles.length){
+          j.articles.forEach(a=>{
+            newsList.insertAdjacentHTML('beforeend', `<div class="news-item"><h4>${a.title}</h4><div class="muted small">${a.source.name} • ${new Date(a.publishedAt).toLocaleString()}</div><p>${a.description || ''}</p></div>`);
+          });
+          return;
+        }
+      } else {
+        // show fallback message
+        newsList.insertAdjacentHTML('beforeend', `<div class="news-item muted">Unable to fetch news (check API key). Showing latest simulated headlines below.</div>`);
+      }
+    }catch(err){
+      newsList.insertAdjacentHTML('beforeend', `<div class="news-item muted">News fetch failed: ${err.message}</div>`);
+    }
+  }
+  // Simulated headlines fallback
+  const sims = [
+    {t:'Search Console tips for 2025', s:'Console News'},
+    {t:'New SEO patterns emerging', s:'SEO Daily'},
+    {t:'How to verify your site quickly', s:'Webmaster Blog'},
+    {t:'Performance metrics you should monitor', s:'Analytics Today'},
+    {t:'Protecting your account: 5 tips', s:'Security Weekly'},
+    {t:'Understanding impressions vs clicks', s:'Search Insights'}
+  ];
+  sims.forEach(s=>{
+    newsList.insertAdjacentHTML('beforeend', `<div class="news-item"><h4>${s.t}</h4><div class="muted small">${s.s}</div></div>`);
+  });
+}
+
+/* Settings: save profile, newsKey, theme */
+$('saveProfile')?.addEventListener('click', ()=>{
+  state.profile.name = $('profileName').value || state.profile.name;
+  state.profile.email = $('profileEmail').value || state.profile.email;
+  state.newsKey = $('newsKey').value || null;
+  if(state.newsKey) localStorage.setItem('news_api_key', state.newsKey);
+  state.theme = $('themeSelect').value||state.theme;
+  saveState(); syncProfileUI(); alert('Settings saved');
+});
+
+$('toggleVerify')?.addEventListener('click', ()=> toggleVerify());
+
+function populateSettings(){
+  $('profileName').value = state.profile.name || '';
+  $('profileEmail').value = state.profile.email || '';
+  $('newsKey').value = state.newsKey || localStorage.getItem('news_api_key') || '';
+  $('themeSelect').value = state.theme || 'auto';
+  $('verifyMsg').textContent = state.verified ? 'Site is marked verified (client-side).' : 'Site is not verified';
+}
+
+/* Verify toggle */
+function toggleVerify(){
+  state.verified = !state.verified;
+  $('siteStatus').textContent = state.verified ? 'Verified' : 'Not verified';
+  $('verifyMsg') && ($('verifyMsg').textContent = state.verified ? 'Site verified (client-side simulated).' : 'Site not verified');
+  saveState();
+}
+
+/* Profile sync */
+function syncProfileUI(){
+  $('siteName').textContent = state.profile.name ? state.profile.name.toLowerCase().replace(/\s+/g,'') + '.example' : 'example.com';
+  $('pageTitle').textContent = 'Home';
+  $('homeBalance').textContent = fmtN(state.wallet.balance);
+  $('profileName') && ($('profileName').value = state.profile.name);
+  $('profileEmail') && ($('profileEmail').value = state.profile.email);
+}
+
+/* Settings population on load */
+function populateSettingsOnStart(){
+  $('profileName') && ($('profileName').value = state.profile.name);
+  $('profileEmail') && ($('profileEmail').value = state.profile.email);
+  $('newsKey') && ($('newsKey').value = state.newsKey || localStorage.getItem('news_api_key') || '');
+  $('themeSelect') && ($('themeSelect').value = state.theme || 'auto');
+}
+populateSettingsOnStart();
+
+/* Theme handling */
+function setTheme(t){
+  if(t==='dark'){ document.body.classList.add('dark'); state.theme='dark'; }
+  else if(t==='light'){ document.body.classList.remove('dark'); state.theme='light'; }
+  else { // auto
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+    document.body.classList.toggle('dark', prefersDark);
+    state.theme='auto';
+  }
+  saveState();
+}
+function applyTheme(t){
+  if(t==='dark') document.body.classList.add('dark');
+  else if(t==='light') document.body.classList.remove('dark');
+  else { /* auto */ }
+}
+applyTheme(state.theme);
+
+/* Periodic refresh */
+setInterval(()=> {
+  // refresh news and snapshot metric deltas
+  fetchNews();
+}, 1000 * 60 * 5); // every 5 minutes
+
+/* Export snapshot as CSV for performance metrics (simple) */
+function exportSnapshot(){
+  const days = parseInt($('range').value,10) || 28;
+  const perf = generatePerformance(days);
+  const rows = [['date','clicks','impressions','ctr','position']];
+  for(let i=0;i<perf.labels.length;i++){
+    rows.push([perf.labels[i], perf.clicks[i], perf.impressions[i], perf.ctr[i], perf.pos[i]]);
+  }
+  const csv = rows.map(r=> r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download = 'performance.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* Quick demo: add a receive button that simulates incoming funds */
+(function addQuickReceiveButton(){
+  const b = document.createElement('button'); b.className='btn ghost small'; b.textContent='Simulate Receive';
+  b.style.marginLeft='8px';
+  b.onclick = ()=> { simulateReceive(randInt(100,800),'Simulated deposit'); };
+  document.querySelector('.controls').appendChild(b);
+})();
+
+/* Wire metric selection change in dashboard */
+$('metricSelect').addEventListener('change', ()=> { renderDashboard(); });
+
+/* On load actions */
+refreshAll();
+
+/* Accessibility: keyboard shortcuts */
+window.addEventListener('keydown',(e)=>{
+  if(e.key === '1') { document.querySelector('.nav button[data-view="home"]').click(); }
+  if(e.key === '2') { document.querySelector('.nav button[data-view="dashboard"]').click(); }
+  if(e.key === '3') { document.querySelector('.nav button[data-view="wallet"]').click(); }
+});
+
+/* Expose some functions for console debugging (optional) */
+window.__APP = { state, refreshAll, simulateReceive, exportSnapshot, saveState };
+
+/* Final save on page unload */
+window.addEventListener('beforeunload', ()=> saveState());
+
 </script>
 </body>
 </html>

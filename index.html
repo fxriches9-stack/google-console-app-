@@ -46,13 +46,11 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .metric{font-size:20px;font-weight:800}
 .metric-sub{font-size:13px;color:var(--muted);margin-top:6px}
 .delta{font-size:13px;margin-left:8px}
-/* mini-sparkline canvas inside cards */
-.card canvas.sparkline{width:100%;height:40px;margin-top:6px;}
 
 /* content */
 .content{display:grid;grid-template-columns:2fr 1fr;gap:12px}
 .panel{background:var(--card);padding:14px;border-radius:10px;border:1px solid #eef4ff}
-.panel h3{margin:0 0 12px 0;font-size:16px}
+.panel h3, .panel h4{margin:0 0 12px 0;font-size:16px}
 .muted{color:var(--muted)}
 .small{font-size:13px;color:var(--muted)}
 .chart-wrap{height:320px}
@@ -173,22 +171,18 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
           <div class="card">
             <div class="metric" id="m-clicks">0</div>
             <div class="metric-sub">Clicks <span id="d-clicks" class="delta"></span></div>
-            <canvas class="sparkline" id="spark-clicks"></canvas>
           </div>
           <div class="card">
             <div class="metric" id="m-impr">0</div>
             <div class="metric-sub">Impressions <span id="d-impr" class="delta"></span></div>
-            <canvas class="sparkline" id="spark-impr"></canvas>
           </div>
           <div class="card">
             <div class="metric" id="m-ctr">0%</div>
             <div class="metric-sub">Avg CTR <span id="d-ctr" class="delta"></span></div>
-            <canvas class="sparkline" id="spark-ctr"></canvas>
           </div>
           <div class="card">
             <div class="metric" id="m-pos">0.0</div>
             <div class="metric-sub">Avg position <span id="d-pos" class="delta"></span></div>
-            <canvas class="sparkline" id="spark-pos"></canvas>
           </div>
         </div>
 
@@ -203,7 +197,6 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
           <aside class="panel">
             <h4>Latest news</h4>
             <div id="newsList" class="news-list">
-              <!-- clickable Google News link inserted here -->
               <div class="news-item">
                 <a href="https://news.google.com/home?hl=en-NG&gl=NG&ceid=NG:en" target="_blank" rel="noopener noreferrer">
                   Open Google News (Nigeria)
@@ -321,13 +314,19 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
             <div style="margin-top:12px">
               <label>Theme</label>
               <select id="themeSelect" class="input-text">
-                <option value="system">System default</option>
+                <option value="auto">Auto (system)</option>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
-              </select><br/><br/>
-              <label><input type="checkbox" id="verifiedToggle"/> Site verified</label>
+              </select>
             </div>
           </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <h4>Site verification</h4>
+          <p class="muted">Toggle verification (client-side simulation)</p>
+          <button class="btn ghost" id="toggleVerify">Verify site</button>
+          <div class="small muted" id="verifyStatus">Status: Verified</div>
         </div>
       </section>
     </main>
@@ -335,155 +334,109 @@ body.dark .nav button.active{background:rgba(59,130,246,0.12);color:var(--accent
 </div>
 
 <script>
-// ------------------ STATE ------------------
-let walletBalance = 5000000; // initial balance in Naira
-let transactions = [];
-let homeMetrics = { clicks: 1200, impressions: 5400, ctr: 22.3, position: 4.6 };
+/* --- State --- */
+let wallet = {balance:5000000,tx:[]};
+let receiveAddr = "RD-" + Math.random().toString(36).slice(2,12).toUpperCase();
+document.getElementById("receiveAddress").textContent = receiveAddr;
+document.getElementById("walletBalance").textContent = '₦' + wallet.balance.toLocaleString();
+document.getElementById("homeBalance").textContent = '₦' + wallet.balance.toLocaleString();
 
-// ------------------ DOM ------------------
+/* --- Nav & Views --- */
+const navBtns = document.querySelectorAll(".nav button");
 const views = {
-  home: document.getElementById('view-home'),
-  dashboard: document.getElementById('view-dashboard'),
-  wallet: document.getElementById('view-wallet'),
-  send: document.getElementById('view-send'),
-  receive: document.getElementById('view-receive'),
-  settingsPanel: document.getElementById('view-settingsPanel')
+  home: document.getElementById("view-home"),
+  dashboard: document.getElementById("view-dashboard"),
+  wallet: document.getElementById("view-wallet"),
+  send: document.getElementById("view-send"),
+  receive: document.getElementById("view-receive"),
+  settingsPanel: document.getElementById("view-settingsPanel")
 };
-const navButtons = document.querySelectorAll('.nav button');
-const homeBalanceEl = document.getElementById('homeBalance');
-const walletBalanceEl = document.getElementById('walletBalance');
-const txTbody = document.getElementById('txTbody');
 
-// ------------------ NAVIGATION ------------------
-navButtons.forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    navButtons.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    Object.values(views).forEach(v=>v.classList.add('hidden'));
-    let viewKey = btn.dataset.view==='settings'?'settingsPanel':btn.dataset.view;
-    views[viewKey].classList.remove('hidden');
-    document.getElementById('pageTitle').textContent = btn.textContent;
+navBtns.forEach(btn=>{
+  btn.addEventListener("click",()=>{  
+    navBtns.forEach(b=>b.classList.remove("active")); btn.classList.add("active");
+    document.getElementById("pageTitle").textContent = btn.textContent;
+    Object.values(views).forEach(v=>v.classList.add("hidden"));
+    const key = btn.dataset.view;
+    views[key].classList.remove("hidden");
   });
 });
 
-// ------------------ WALLET ------------------
-function updateWalletDisplay(){
-  homeBalanceEl.textContent = '₦'+walletBalance.toLocaleString();
-  walletBalanceEl.textContent = '₦'+walletBalance.toLocaleString();
-  renderTxTable();
-}
-function renderTxTable(){
-  txTbody.innerHTML = '';
-  transactions.slice().reverse().forEach(tx=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${tx.date}</td><td>${tx.type}</td><td>₦${tx.amount.toLocaleString()}</td><td>${tx.note||'-'}</td>`;
-    txTbody.appendChild(tr);
-  });
-}
-function openSend(){navButtons.forEach(b=>b.classList.remove('active'));views.send.classList.remove('hidden');document.getElementById('pageTitle').textContent='Send';}
-function openReceive(){navButtons.forEach(b=>b.classList.remove('active'));views.receive.classList.remove('hidden');document.getElementById('pageTitle').textContent='Receive';document.getElementById('receiveAddress').textContent='RD-'+Math.random().toString(36).substring(2,12).toUpperCase();}
-updateWalletDisplay();
+/* --- Send / Receive --- */
+function openSend(){document.querySelector('[data-view="send"]').click();}
+function openReceive(){document.querySelector('[data-view="receive"]').click();}
 
-// ------------------ SEND FORM ------------------
-document.getElementById('sendForm').addEventListener('submit',e=>{
+document.getElementById("sendForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const amt=parseFloat(document.getElementById('sendAmount').value);
-  if(isNaN(amt)||amt<=0){document.getElementById('sendMsg').textContent='Invalid amount';return;}
-  if(amt>walletBalance){document.getElementById('sendMsg').textContent='Insufficient funds';return;}
-  walletBalance-=amt;
-  const note=document.getElementById('sendNote').value;
-  transactions.push({date:new Date().toLocaleDateString(),type:'Sent',amount:amt,note});
-  updateWalletDisplay();
-  document.getElementById('sendMsg').textContent='Sent successfully!';
+  const amt = parseFloat(document.getElementById("sendAmount").value);
+  const to = document.getElementById("sendTo").value.trim();
+  if(!to || isNaN(amt) || amt<=0){
+    document.getElementById("sendMsg").textContent="Invalid recipient or amount"; return;
+  }
+  if(amt>wallet.balance){document.getElementById("sendMsg").textContent="Insufficient balance"; return;}
+  wallet.balance -= amt;
+  wallet.tx.push({date:new Date().toLocaleString(),type:'Sent',amount:amt,note:document.getElementById("sendNote").value});
+  updateWalletUI();
+  document.getElementById("sendMsg").textContent="Sent successfully!";
+  setTimeout(()=>{document.getElementById("sendMsg").textContent="";},2500);
+  document.getElementById("sendForm").reset();
 });
 
-// ------------------ SPARKLINES ------------------
-function generateSparkline(id,values,color){
-  new Chart(document.getElementById(id),{
-    type:'line',
-    data:{labels:values.map((_,i)=>i),datasets:[{data:values,borderColor:color,fill:false,tension:0.4,pointRadius:0}]},
-    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}
+document.getElementById("copyAddr").addEventListener("click",()=>{
+  navigator.clipboard.writeText(receiveAddr);
+  alert("Address copied!");
+});
+
+/* --- Wallet UI --- */
+function updateWalletUI(){
+  document.getElementById("walletBalance").textContent = '₦'+wallet.balance.toLocaleString();
+  document.getElementById("homeBalance").textContent = '₦'+wallet.balance.toLocaleString();
+  const tbody = document.getElementById("txTbody");
+  tbody.innerHTML = '';
+  wallet.tx.slice().reverse().forEach(t=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${t.date}</td><td>${t.type}</td><td>₦${t.amount.toLocaleString()}</td><td>${t.note||''}</td>`;
+    tbody.appendChild(tr);
   });
 }
-generateSparkline('spark-clicks',[1100,1200,1150,1250,1230,1300,1200], '#1a73e8');
-generateSparkline('spark-impr',[5000,5400,5200,5500,5300,5600,5400], '#0b5bd7');
-generateSparkline('spark-ctr',[20,22,21,23,22,24,22], '#16a34a');
-generateSparkline('spark-pos',[5,4.6,4.8,4.4,4.5,4.3,4.6], '#ea4335');
 
-// ------------------ HOME CHART ------------------
-const homeChartCtx = document.getElementById('homeChart').getContext('2d');
-let homeChart = new Chart(homeChartCtx,{
-  type:'line',
-  data:{
-    labels:['Day 1','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7'],
-    datasets:[{label:'Clicks',data:[1100,1200,1150,1250,1230,1300,1200],borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,0.1)',fill:true,tension:0.3}]
-  },
-  options:{
-    responsive:true,
-    animation:{duration:1200,easing:'easeOutQuart'},
-    plugins:{legend:{display:true}},
-    scales:{y:{beginAtZero:true}}
-  }
+/* --- Charts --- */
+const homeChart = new Chart(document.getElementById("homeChart"),{
+  type:'line', data:{labels:['Day 1','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7'], datasets:[{label:'Clicks',data:[120,150,170,90,200,180,240],borderColor:'#1a73e8',tension:0.3,fill:false} ]}, options:{responsive:true}
+});
+const dashChart = new Chart(document.getElementById("dashChart"),{
+  type:'bar', data:{labels:['Query 1','Query 2','Query 3','Query 4'], datasets:[{label:'Clicks',data:[120,80,50,60],backgroundColor:'#1a73e8'}]}, options:{responsive:true}
 });
 
-// ------------------ DASHBOARD CHART ------------------
-const dashChartCtx=document.getElementById('dashChart').getContext('2d');
-let dashChart=new Chart(dashChartCtx,{
-  type:'line',
-  data:{
-    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    datasets:[{label:'Clicks',data:[1000,1100,1200,1150,1300,1250,1400],borderColor:'#0b5bd7',backgroundColor:'rgba(11,91,215,0.1)',fill:true,tension:0.3}]
-  },
-  options:{
-    responsive:true,
-    animation:{duration:1000,easing:'easeInOutQuad'},
-    scales:{y:{beginAtZero:true}}
-  }
-});
-document.getElementById('metricSelect').addEventListener('change',(e)=>{
-  const val=e.target.value;
-  let data=[],label='',bg='';
-  if(val==='clicks'){data=[1000,1100,1200,1150,1300,1250,1400];label='Clicks';bg='rgba(11,91,215,0.1)';}
-  else if(val==='impressions'){data=[5000,5400,5200,5500,5300,5600,5400];label='Impressions';bg='rgba(26,115,232,0.1)';}
-  else if(val==='ctr'){data=[20,22,21,23,22,24,22];label='CTR';bg='rgba(22,163,52,0.1)';}
-  else{data=[5,4.6,4.8,4.4,4.5,4.3,4.6];label='Position';bg='rgba(234,67,53,0.1)';}
-  dashChart.data.datasets[0].data=data;
-  dashChart.data.datasets[0].label=label;
-  dashChart.data.datasets[0].backgroundColor=bg;
-  dashChart.update();
-  populateDashQueries();
+/* --- Sample Dashboard Queries --- */
+const dashQueries = document.getElementById("dashQueries");
+[ {q:'Riches App',c:120,i:3500,ctr:'3.4%'},{q:'Nigeria news',c:80,i:2000,ctr:'4%'},{q:'Wallet app',c:50,i:1000,ctr:'5%'},{q:'Crypto balance',c:60,i:1100,ctr:'5.4%'} ].forEach(q=>{
+  const tr = document.createElement("tr");
+  tr.innerHTML=`<td>${q.q}</td><td>${q.c}</td><td>${q.i}</td><td>${q.ctr}</td>`;
+  dashQueries.appendChild(tr);
 });
 
-// ------------------ DASHBOARD TABLE ------------------
-function populateDashQueries(){
-  const tbody=document.getElementById('dashQueries');
-  tbody.innerHTML='';
-  for(let i=1;i<=7;i++){
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>Query ${i}</td><td>${Math.floor(Math.random()*500+50)}</td><td>${Math.floor(Math.random()*5000+500)}</td><td>${(Math.random()*25+5).toFixed(1)}%</td>`;
-    tbody.appendChild(tr);
-  }
-}
-populateDashQueries();
-
-// ------------------ THEME ------------------
-function applyTheme(theme){
-  if(theme==='dark'){document.body.classList.add('dark');document.getElementById('themeToggle').textContent='☀️';}
-  else if(theme==='light'){document.body.classList.remove('dark');document.getElementById('themeToggle').textContent='🌙';}
-  else{if(window.matchMedia('(prefers-color-scheme:dark)').matches){document.body.classList.add('dark');document.getElementById('themeToggle').textContent='☀️';}else{document.body.classList.remove('dark');document.getElementById('themeToggle').textContent='🌙';}}
-}
-document.getElementById('themeToggle').addEventListener('click',()=>{
-  if(document.body.classList.contains('dark')){applyTheme('light');}else{applyTheme('dark');}
+/* --- Theme --- */
+const themeBtn = document.getElementById("themeToggle");
+themeBtn.addEventListener("click",()=>{
+  document.body.classList.toggle("dark");
 });
-applyTheme('system');
+document.getElementById("themeSelect").addEventListener("change",e=>{
+  if(e.target.value==='dark') document.body.classList.add("dark");
+  else if(e.target.value==='light') document.body.classList.remove("dark");
+  else document.body.classList.remove("dark");
+});
 
-// ------------------ REFRESH ------------------
-document.getElementById('refreshBtn').addEventListener('click',()=>location.reload());
+/* --- Profile Save --- */
+document.getElementById("saveProfile").addEventListener("click",()=>{
+  alert("Profile saved (simulation)");
+});
 
-// ------------------ COPY ADDRESS ------------------
-document.getElementById('copyAddr').addEventListener('click',()=>{
-  navigator.clipboard.writeText(document.getElementById('receiveAddress').textContent);
-  alert('Address copied!');
+/* --- Verification --- */
+let verified = true;
+document.getElementById("toggleVerify").addEventListener("click",()=>{
+  verified = !verified;
+  document.getElementById("verifyStatus").textContent = "Status: "+(verified?"Verified":"Unverified");
 });
 </script>
 </body>
